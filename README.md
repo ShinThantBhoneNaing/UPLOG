@@ -170,5 +170,5 @@ npx tsc --noEmit # typecheck
 
 
 ## Collaborators
-ShinThantBhoneNaing [ pinkkuu ]
+ShinThantBhoneNaing [ pintkuu ]
 Khit Thit [ mytx ]
