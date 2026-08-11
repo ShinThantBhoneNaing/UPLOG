@@ -167,3 +167,8 @@ npx tsc --noEmit # typecheck
 2. Set the three environment variables (`NEXT_PUBLIC_SUPABASE_URL`,
    `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL=https://your-domain`).
 3. Update the Supabase Auth Site URL / redirect list to the production domain.
+
+
+## Collaborators
+ShinThantBhoneNaing [ pinkkuu ]
+Khit Thit [ mytx ]
