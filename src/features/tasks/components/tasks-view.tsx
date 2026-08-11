@@ -1,0 +1,203 @@
+"use client";
+
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { CheckSquare, LayoutGrid, List, Search } from "lucide-react";
+import { toast } from "sonner";
+import { EmptyState } from "@/components/empty-state";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { STATUS_META, TASK_STATUSES } from "@/lib/utils";
+import type {
+  ProfileLite,
+  TaskStatus,
+  TaskWithRelations,
+} from "@/types/database";
+import { updateTask } from "../actions";
+import { Board } from "./board";
+import { TaskFormDialog } from "./task-form-dialog";
+import { TaskList } from "./task-list";
+
+const ALL = "__all__";
+const ME = "__me__";
+const UNASSIGNED = "__unassigned__";
+
+export function TasksView({
+  tasks: serverTasks,
+  profiles,
+  projects,
+  currentUserId,
+}: {
+  tasks: TaskWithRelations[];
+  profiles: ProfileLite[];
+  projects: { id: string; name: string }[];
+  currentUserId: string;
+}) {
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+
+  // Local copy for optimistic board moves; resyncs when the server
+  // component re-renders with fresh data (render-time derived state).
+  const [tasks, setTasks] = useState(serverTasks);
+  const [prevServerTasks, setPrevServerTasks] = useState(serverTasks);
+  if (serverTasks !== prevServerTasks) {
+    setPrevServerTasks(serverTasks);
+    setTasks(serverTasks);
+  }
+
+  const [view, setView] = useState<"board" | "list">("board");
+  const [assignee, setAssignee] = useState<string>(ME);
+  const [project, setProject] = useState<string>(ALL);
+  const [status, setStatus] = useState<string>(ALL);
+  const [query, setQuery] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return tasks.filter((t) => {
+      if (assignee === ME && t.assignee?.id !== currentUserId) return false;
+      if (assignee === UNASSIGNED && t.assignee) return false;
+      if (
+        assignee !== ALL &&
+        assignee !== ME &&
+        assignee !== UNASSIGNED &&
+        t.assignee?.id !== assignee
+      )
+        return false;
+      if (project !== ALL && t.project?.id !== project) return false;
+      if (status !== ALL && t.status !== status) return false;
+      if (q && !t.title.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [tasks, assignee, project, status, query, currentUserId]);
+
+  function moveTask(taskId: string, to: TaskStatus) {
+    const prev = tasks;
+    const minPos = Math.min(
+      0,
+      ...tasks.filter((t) => t.status === to).map((t) => t.position)
+    );
+    // 1. Optimistic UI
+    setTasks((ts) =>
+      ts.map((t) =>
+        t.id === taskId ? { ...t, status: to, position: minPos - 1 } : t
+      )
+    );
+    // 2. Persist; 3. activity happens in the DB trigger; 4. revert on failure
+    startTransition(async () => {
+      const result = await updateTask({ id: taskId, status: to, position: minPos - 1 });
+      if (!result.ok) {
+        setTasks(prev);
+        toast.error(result.error);
+      } else {
+        router.refresh();
+      }
+    });
+  }
+
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Tabs value={view} onValueChange={(v) => setView(v as "board" | "list")}>
+          <TabsList>
+            <TabsTrigger value="board" aria-label="Board view">
+              <LayoutGrid className="size-4" aria-hidden /> Board
+            </TabsTrigger>
+            <TabsTrigger value="list" aria-label="List view">
+              <List className="size-4" aria-hidden /> List
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        <div className="relative ml-auto w-full sm:w-52">
+          <Search
+            className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Filter tasks…"
+            className="pl-8"
+            aria-label="Filter tasks by title"
+          />
+        </div>
+
+        <Select value={assignee} onValueChange={(v) => setAssignee(v ?? ME)}>
+          <SelectTrigger className="w-36" aria-label="Filter by assignee">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ME}>My tasks</SelectItem>
+            <SelectItem value={ALL}>Everyone</SelectItem>
+            <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+            {profiles.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.full_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={project} onValueChange={(v) => setProject(v ?? ALL)}>
+          <SelectTrigger className="w-36" aria-label="Filter by project">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All projects</SelectItem>
+            {projects.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {view === "list" && (
+          <Select value={status} onValueChange={(v) => setStatus(v ?? ALL)}>
+            <SelectTrigger className="w-36" aria-label="Filter by status">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All statuses</SelectItem>
+              {TASK_STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {STATUS_META[s].label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        <TaskFormDialog profiles={profiles} projects={projects} />
+      </div>
+
+      {filtered.length === 0 ? (
+        <EmptyState
+          icon={CheckSquare}
+          title={query || status !== ALL ? "No matching tasks" : "No tasks yet"}
+          description={
+            query || status !== ALL
+              ? "Try adjusting your filters."
+              : "Your board is clear. Create your first task to get moving."
+          }
+          action={
+            !query && status === ALL ? (
+              <TaskFormDialog profiles={profiles} projects={projects} />
+            ) : undefined
+          }
+        />
+      ) : view === "board" ? (
+        <Board tasks={filtered} onMove={moveTask} />
+      ) : (
+        <TaskList tasks={filtered} />
+      )}
+    </div>
+  );
+}
