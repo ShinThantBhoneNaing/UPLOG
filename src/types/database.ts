@@ -71,6 +71,8 @@ export interface Task {
   creator_id: string | null;
   due_date: string | null;
   position: number;
+  /** Optional planned effort in hours (displayed as "est."). */
+  estimate_hours: number | null;
   completed_at: string | null;
   created_at: string;
   updated_at: string;

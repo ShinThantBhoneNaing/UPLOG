@@ -50,8 +50,14 @@ export function TaskFormDialog({
   const [assigneeId, setAssigneeId] = useState(UNSET);
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [dueDate, setDueDate] = useState("");
+  const [estimate, setEstimate] = useState("");
 
   function submit() {
+    const parsedEstimate = estimate.trim() ? Number(estimate) : null;
+    if (parsedEstimate !== null && (!Number.isFinite(parsedEstimate) || parsedEstimate <= 0)) {
+      toast.error("Estimate must be a positive number of hours.");
+      return;
+    }
     startTransition(async () => {
       const result = await createTask({
         title,
@@ -60,6 +66,7 @@ export function TaskFormDialog({
         assigneeId: assigneeId === UNSET ? null : assigneeId,
         priority,
         dueDate: dueDate || null,
+        estimateHours: parsedEstimate,
       });
       if (result.ok) {
         toast.success("Task created");
@@ -67,6 +74,7 @@ export function TaskFormDialog({
         setTitle("");
         setDescription("");
         setDueDate("");
+        setEstimate("");
         setAssigneeId(UNSET);
         setPriority("medium");
         router.refresh();
@@ -188,6 +196,21 @@ export function TaskFormDialog({
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
+              />
+            </div>
+
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="task-estimate">Estimate (hours)</Label>
+              <Input
+                id="task-estimate"
+                type="number"
+                inputMode="decimal"
+                min="0.25"
+                step="0.25"
+                max="999"
+                placeholder="e.g. 2.5 (optional)"
+                value={estimate}
+                onChange={(e) => setEstimate(e.target.value)}
               />
             </div>
           </div>

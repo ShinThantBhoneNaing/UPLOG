@@ -46,6 +46,11 @@ export function TaskCard({
           {task.due_date && (
             <DueBadge dueDate={task.due_date} done={task.status === "done"} />
           )}
+          {task.estimate_hours != null && (
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {task.estimate_hours}h
+            </span>
+          )}
         </div>
         {task.assignee && (
           <UserAvatar

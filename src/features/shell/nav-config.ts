@@ -6,6 +6,7 @@ import {
   History,
   LayoutDashboard,
   NotebookPen,
+  Presentation,
   Settings,
   ShieldCheck,
   Users,
@@ -23,6 +24,7 @@ export interface NavItem {
 
 export const MAIN_NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/standup", label: "Standard Meeting", icon: Presentation },
   { href: "/tasks", label: "My Tasks", icon: CheckSquare },
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/daily", label: "Daily Log", icon: NotebookPen },
@@ -45,9 +47,9 @@ export const SECONDARY_NAV: NavItem[] = [
 /** Compact set for the mobile bottom bar. */
 export const MOBILE_NAV: NavItem[] = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
+  { href: "/standup", label: "Meeting", icon: Presentation },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/daily", label: "Daily", icon: NotebookPen },
-  { href: "/activity", label: "Activity", icon: Activity },
 ];
 
 export function visibleFor(items: NavItem[], role: UserRole): NavItem[] {

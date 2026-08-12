@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { LogOut, Monitor, Moon, Settings, Sun, User } from "lucide-react";
+import {
+  CheckSquare,
+  LogOut,
+  Monitor,
+  Moon,
+  Settings,
+  Sun,
+  User,
+} from "lucide-react";
 import { UserAvatar } from "@/components/user-avatar";
 import {
   DropdownMenu,
@@ -33,15 +41,32 @@ export function UserMenu({ profile }: { profile: Profile }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>
-          <div className="truncate font-medium">{profile.full_name}</div>
-          <div className="truncate text-xs font-normal text-muted-foreground">
-            {profile.email}
+          <div className="flex items-center gap-2.5 py-0.5">
+            <UserAvatar
+              name={profile.full_name}
+              avatarUrl={profile.avatar_url}
+              className="size-9"
+            />
+            <div className="min-w-0">
+              <div className="truncate font-medium">{profile.full_name}</div>
+              {profile.job_title && (
+                <div className="truncate text-xs font-normal text-muted-foreground">
+                  {profile.job_title}
+                </div>
+              )}
+              <div className="truncate text-xs font-normal text-muted-foreground">
+                {profile.email}
+              </div>
+            </div>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem render={<Link href={`/team/${profile.id}`} />}>
             <User /> My profile
+          </DropdownMenuItem>
+          <DropdownMenuItem render={<Link href="/tasks" />}>
+            <CheckSquare /> My tasks
           </DropdownMenuItem>
           <DropdownMenuItem render={<Link href="/settings" />}>
             <Settings /> Settings

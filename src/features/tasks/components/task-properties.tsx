@@ -177,6 +177,29 @@ export function TaskProperties({
         />
       </div>
 
+      <div className="space-y-1.5">
+        <Label htmlFor="prop-estimate">Estimate (hours)</Label>
+        <Input
+          id="prop-estimate"
+          type="number"
+          inputMode="decimal"
+          min="0.25"
+          step="0.25"
+          max="999"
+          placeholder="e.g. 2.5"
+          defaultValue={task.estimate_hours ?? ""}
+          disabled={pending}
+          onBlur={(e) => {
+            const raw = e.target.value.trim();
+            const value = raw ? Number(raw) : null;
+            if (value !== null && (!Number.isFinite(value) || value <= 0)) return;
+            if (value !== task.estimate_hours) {
+              save({ id: task.id, estimateHours: value });
+            }
+          }}
+        />
+      </div>
+
       {canDelete && (
         <>
           <Button
