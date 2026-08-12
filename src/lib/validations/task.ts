@@ -18,7 +18,6 @@ export const createTaskSchema = z.object({
   priority: z.enum(TASK_PRIORITY_VALUES).default("medium"),
   status: z.enum(TASK_STATUS_VALUES).default("todo"),
   dueDate: z.iso.date().nullable().optional(),
-  estimateHours: z.number().positive().max(999).nullable().optional(),
   labelIds: z.array(z.uuid()).max(10).optional(),
 });
 
@@ -31,7 +30,6 @@ export const updateTaskSchema = z.object({
   priority: z.enum(TASK_PRIORITY_VALUES).optional(),
   status: z.enum(TASK_STATUS_VALUES).optional(),
   dueDate: z.iso.date().nullable().optional(),
-  estimateHours: z.number().positive().max(999).nullable().optional(),
   position: z.number().finite().optional(),
 });
 

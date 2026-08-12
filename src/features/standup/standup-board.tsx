@@ -262,10 +262,10 @@ export function StandupBoard({ data }: { data: StandupData }) {
       }))
       .map((r) => ({
         ...r,
-        estHours: [...r.todo, ...r.inProgress, ...r.done].reduce(
-          (sum, t) => sum + (t.estimate_hours ?? 0),
-          0
-        ),
+        estHours:
+          Math.round(
+            r.done.reduce((sum, t) => sum + (t.time_taken_hours ?? 0), 0) * 100
+          ) / 100,
       }))
       .filter(
         (r) =>
@@ -432,7 +432,14 @@ export function StandupBoard({ data }: { data: StandupData }) {
                 aria-label="Search tasks on the board"
               />
             </div>
-            <Select value={employee} onValueChange={(v) => setEmployee(v ?? ALL)}>
+            <Select
+              value={employee}
+              onValueChange={(v) => setEmployee(v ?? ALL)}
+              items={{
+                [ALL]: "All employees",
+                ...Object.fromEntries(data.profiles.map((p) => [p.id, p.full_name])),
+              }}
+            >
               <SelectTrigger className="h-8 w-36 text-sm" aria-label="Filter by employee">
                 <SelectValue />
               </SelectTrigger>
@@ -445,7 +452,14 @@ export function StandupBoard({ data }: { data: StandupData }) {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={project} onValueChange={(v) => setProject(v ?? ALL)}>
+            <Select
+              value={project}
+              onValueChange={(v) => setProject(v ?? ALL)}
+              items={{
+                [ALL]: "All projects",
+                ...Object.fromEntries(data.projects.map((p) => [p.id, p.name])),
+              }}
+            >
               <SelectTrigger className="h-8 w-36 text-sm" aria-label="Filter by project">
                 <SelectValue />
               </SelectTrigger>
@@ -458,7 +472,16 @@ export function StandupBoard({ data }: { data: StandupData }) {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={status} onValueChange={(v) => setStatus(v ?? ALL)}>
+            <Select
+              value={status}
+              onValueChange={(v) => setStatus(v ?? ALL)}
+              items={{
+                [ALL]: "All statuses",
+                todo: "To Do",
+                in_progress: "In Progress",
+                done: "Done",
+              }}
+            >
               <SelectTrigger className="h-8 w-32 text-sm" aria-label="Filter by status">
                 <SelectValue />
               </SelectTrigger>
@@ -489,7 +512,7 @@ export function StandupBoard({ data }: { data: StandupData }) {
         <span className="ml-auto flex items-baseline gap-1.5">
           <span className="font-semibold tabular-nums">{totalEst || "—"}</span>
           <span className="text-muted-foreground">
-            {totalEst ? "h planned (est.)" : "no estimates yet"}
+            {totalEst ? "h tracked" : "no time tracked yet"}
           </span>
         </span>
       </div>
@@ -532,7 +555,7 @@ export function StandupBoard({ data }: { data: StandupData }) {
                   </div>
                 ))}
                 <div className="px-3 py-2.5 text-right">
-                  Est. Time
+                  Time Taken
                 </div>
               </div>
 
@@ -598,9 +621,7 @@ export function StandupBoard({ data }: { data: StandupData }) {
                       {row.estHours ? (
                         <span className="font-semibold">
                           {row.estHours}h
-                          <span className="ml-1 text-[10px] font-normal text-muted-foreground">
-                            est.
-                          </span>
+
                         </span>
                       ) : (
                         <span className="text-muted-foreground">—</span>

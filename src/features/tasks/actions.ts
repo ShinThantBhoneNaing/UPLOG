@@ -50,7 +50,6 @@ export async function createTask(
         priority: d.priority,
         status: d.status,
         due_date: d.dueDate ?? null,
-        estimate_hours: d.estimateHours ?? null,
         creator_id: user.id,
       })
       .select("id")
@@ -95,7 +94,6 @@ export async function updateTask(
     if (d.priority !== undefined) patch.priority = d.priority;
     if (d.status !== undefined) patch.status = d.status;
     if (d.dueDate !== undefined) patch.due_date = d.dueDate;
-    if (d.estimateHours !== undefined) patch.estimate_hours = d.estimateHours;
     if (d.position !== undefined) patch.position = d.position;
 
     const { error, count } = await supabase

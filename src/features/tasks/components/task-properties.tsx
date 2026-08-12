@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  formatDate,
   PRIORITY_META,
   STATUS_META,
   TASK_PRIORITIES,
@@ -87,6 +88,9 @@ export function TaskProperties({
         <Select
           value={task.status}
           onValueChange={(v) => v && save({ id: task.id, status: v as TaskStatus })}
+          items={Object.fromEntries(
+            TASK_STATUSES.map((s) => [s, STATUS_META[s].label])
+          )}
         >
           <SelectTrigger id="prop-status" className="w-full" disabled={pending}>
             <SelectValue />
@@ -106,6 +110,9 @@ export function TaskProperties({
         <Select
           value={task.priority}
           onValueChange={(v) => v && save({ id: task.id, priority: v as TaskPriority })}
+          items={Object.fromEntries(
+            TASK_PRIORITIES.map((p) => [p, PRIORITY_META[p].label])
+          )}
         >
           <SelectTrigger id="prop-priority" className="w-full" disabled={pending}>
             <SelectValue />
@@ -127,6 +134,10 @@ export function TaskProperties({
           onValueChange={(v) =>
             save({ id: task.id, assigneeId: !v || v === UNSET ? null : v })
           }
+          items={{
+            [UNSET]: "Unassigned",
+            ...Object.fromEntries(profiles.map((p) => [p.id, p.full_name])),
+          }}
         >
           <SelectTrigger id="prop-assignee" className="w-full" disabled={pending}>
             <SelectValue />
@@ -149,6 +160,10 @@ export function TaskProperties({
           onValueChange={(v) =>
             save({ id: task.id, projectId: !v || v === UNSET ? null : v })
           }
+          items={{
+            [UNSET]: "No project",
+            ...Object.fromEntries(projects.map((p) => [p.id, p.name])),
+          }}
         >
           <SelectTrigger id="prop-project" className="w-full" disabled={pending}>
             <SelectValue />
@@ -177,28 +192,25 @@ export function TaskProperties({
         />
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="prop-estimate">Estimate (hours)</Label>
-        <Input
-          id="prop-estimate"
-          type="number"
-          inputMode="decimal"
-          min="0.25"
-          step="0.25"
-          max="999"
-          placeholder="e.g. 2.5"
-          defaultValue={task.estimate_hours ?? ""}
-          disabled={pending}
-          onBlur={(e) => {
-            const raw = e.target.value.trim();
-            const value = raw ? Number(raw) : null;
-            if (value !== null && (!Number.isFinite(value) || value <= 0)) return;
-            if (value !== task.estimate_hours) {
-              save({ id: task.id, estimateHours: value });
-            }
-          }}
-        />
-      </div>
+      {(task.started_at || task.time_taken_hours != null) && (
+        <div className="space-y-1.5">
+          <Label>Time taken</Label>
+          <p className="rounded-lg border bg-muted/40 px-3 py-2 text-sm tabular-nums">
+            {task.time_taken_hours != null ? (
+              <>
+                <span className="font-semibold">{task.time_taken_hours}h</span>
+                <span className="ml-1.5 text-xs text-muted-foreground">
+                  in progress → done
+                </span>
+              </>
+            ) : (
+              <span className="text-muted-foreground">
+                Tracking since {formatDate(task.started_at!)}…
+              </span>
+            )}
+          </p>
+        </div>
+      )}
 
       {canDelete && (
         <>

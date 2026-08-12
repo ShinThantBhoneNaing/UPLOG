@@ -71,9 +71,9 @@ export function StickyCard({
             {task.priority === "urgent" ? "Urgent" : "High"}
           </span>
         )}
-        {task.estimate_hours != null && (
+        {task.time_taken_hours != null && (
           <span className="tabular-nums font-medium text-foreground/70">
-            {task.estimate_hours}h
+            {task.time_taken_hours}h
           </span>
         )}
         {task.project && (

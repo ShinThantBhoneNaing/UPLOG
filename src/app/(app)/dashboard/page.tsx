@@ -155,7 +155,7 @@ export default async function DashboardPage() {
     user_id: string;
     open_tasks: number;
     in_progress_tasks: number;
-    done_last_7d: number;
+    done_tasks: number;
     profile: ProfileLite;
   };
   let workload: WorkloadRow[] = [];
@@ -291,7 +291,7 @@ export default async function DashboardPage() {
                           {w.profile.full_name}
                         </Link>
                         <p className="text-xs text-muted-foreground">
-                          {w.open_tasks} open · {w.done_last_7d} done this week
+                          {w.open_tasks} open · {w.done_tasks} done
                         </p>
                       </div>
                     </li>

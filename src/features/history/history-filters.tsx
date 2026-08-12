@@ -89,6 +89,10 @@ export function HistoryFilters({
       <Select
         value={params.get("user") ?? ALL}
         onValueChange={(v) => setParam("user", v)}
+        items={{
+          [ALL]: "Everyone",
+          ...Object.fromEntries(profiles.map((p) => [p.id, p.full_name])),
+        }}
       >
         <SelectTrigger className="w-36" aria-label="Filter by person">
           <SelectValue />
@@ -106,6 +110,10 @@ export function HistoryFilters({
       <Select
         value={params.get("project") ?? ALL}
         onValueChange={(v) => setParam("project", v)}
+        items={{
+          [ALL]: "All projects",
+          ...Object.fromEntries(projects.map((p) => [p.id, p.name])),
+        }}
       >
         <SelectTrigger className="w-36" aria-label="Filter by project">
           <SelectValue />
@@ -123,6 +131,10 @@ export function HistoryFilters({
       <Select
         value={params.get("type") ?? ALL}
         onValueChange={(v) => setParam("type", v)}
+        items={{
+          [ALL]: "All activity",
+          ...Object.fromEntries(TYPE_OPTIONS.map((t) => [t.value, t.label])),
+        }}
       >
         <SelectTrigger className="w-40" aria-label="Filter by activity type">
           <SelectValue />

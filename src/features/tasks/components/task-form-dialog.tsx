@@ -50,14 +50,8 @@ export function TaskFormDialog({
   const [assigneeId, setAssigneeId] = useState(UNSET);
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [dueDate, setDueDate] = useState("");
-  const [estimate, setEstimate] = useState("");
 
   function submit() {
-    const parsedEstimate = estimate.trim() ? Number(estimate) : null;
-    if (parsedEstimate !== null && (!Number.isFinite(parsedEstimate) || parsedEstimate <= 0)) {
-      toast.error("Estimate must be a positive number of hours.");
-      return;
-    }
     startTransition(async () => {
       const result = await createTask({
         title,
@@ -66,7 +60,6 @@ export function TaskFormDialog({
         assigneeId: assigneeId === UNSET ? null : assigneeId,
         priority,
         dueDate: dueDate || null,
-        estimateHours: parsedEstimate,
       });
       if (result.ok) {
         toast.success("Task created");
@@ -74,7 +67,6 @@ export function TaskFormDialog({
         setTitle("");
         setDescription("");
         setDueDate("");
-        setEstimate("");
         setAssigneeId(UNSET);
         setPriority("medium");
         router.refresh();
@@ -138,7 +130,14 @@ export function TaskFormDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="task-project">Project</Label>
-              <Select value={projectId} onValueChange={(v) => setProjectId(v ?? UNSET)}>
+              <Select
+                value={projectId}
+                onValueChange={(v) => setProjectId(v ?? UNSET)}
+                items={{
+                  [UNSET]: "No project",
+                  ...Object.fromEntries(projects.map((p) => [p.id, p.name])),
+                }}
+              >
                 <SelectTrigger id="task-project" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -155,7 +154,14 @@ export function TaskFormDialog({
 
             <div className="space-y-2">
               <Label htmlFor="task-assignee">Assignee</Label>
-              <Select value={assigneeId} onValueChange={(v) => setAssigneeId(v ?? UNSET)}>
+              <Select
+                value={assigneeId}
+                onValueChange={(v) => setAssigneeId(v ?? UNSET)}
+                items={{
+                  [UNSET]: "Unassigned",
+                  ...Object.fromEntries(profiles.map((p) => [p.id, p.full_name])),
+                }}
+              >
                 <SelectTrigger id="task-assignee" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -175,6 +181,9 @@ export function TaskFormDialog({
               <Select
                 value={priority}
                 onValueChange={(v) => setPriority((v ?? "medium") as TaskPriority)}
+                items={Object.fromEntries(
+                  TASK_PRIORITIES.map((p) => [p, PRIORITY_META[p].label])
+                )}
               >
                 <SelectTrigger id="task-priority" className="w-full">
                   <SelectValue />
@@ -199,20 +208,6 @@ export function TaskFormDialog({
               />
             </div>
 
-            <div className="col-span-2 space-y-2">
-              <Label htmlFor="task-estimate">Estimate (hours)</Label>
-              <Input
-                id="task-estimate"
-                type="number"
-                inputMode="decimal"
-                min="0.25"
-                step="0.25"
-                max="999"
-                placeholder="e.g. 2.5 (optional)"
-                value={estimate}
-                onChange={(e) => setEstimate(e.target.value)}
-              />
-            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

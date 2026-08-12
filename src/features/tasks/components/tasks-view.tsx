@@ -129,7 +129,16 @@ export function TasksView({
           />
         </div>
 
-        <Select value={assignee} onValueChange={(v) => setAssignee(v ?? ME)}>
+        <Select
+          value={assignee}
+          onValueChange={(v) => setAssignee(v ?? ME)}
+          items={{
+            [ME]: "My tasks",
+            [ALL]: "Everyone",
+            [UNASSIGNED]: "Unassigned",
+            ...Object.fromEntries(profiles.map((p) => [p.id, p.full_name])),
+          }}
+        >
           <SelectTrigger className="w-36" aria-label="Filter by assignee">
             <SelectValue />
           </SelectTrigger>
@@ -145,7 +154,14 @@ export function TasksView({
           </SelectContent>
         </Select>
 
-        <Select value={project} onValueChange={(v) => setProject(v ?? ALL)}>
+        <Select
+          value={project}
+          onValueChange={(v) => setProject(v ?? ALL)}
+          items={{
+            [ALL]: "All projects",
+            ...Object.fromEntries(projects.map((p) => [p.id, p.name])),
+          }}
+        >
           <SelectTrigger className="w-36" aria-label="Filter by project">
             <SelectValue />
           </SelectTrigger>
@@ -160,7 +176,16 @@ export function TasksView({
         </Select>
 
         {view === "list" && (
-          <Select value={status} onValueChange={(v) => setStatus(v ?? ALL)}>
+          <Select
+            value={status}
+            onValueChange={(v) => setStatus(v ?? ALL)}
+            items={{
+              [ALL]: "All statuses",
+              ...Object.fromEntries(
+                TASK_STATUSES.map((s) => [s, STATUS_META[s].label])
+              ),
+            }}
+          >
             <SelectTrigger className="w-36" aria-label="Filter by status">
               <SelectValue />
             </SelectTrigger>

@@ -21,7 +21,7 @@ export interface StandupRow {
   todo: TaskWithRelations[];
   inProgress: TaskWithRelations[];
   done: TaskWithRelations[];
-  /** Sum of estimate_hours across this row's cards (estimates, not actuals). */
+  /** Sum of auto-tracked time_taken_hours across this row's done cards. */
   estHours: number;
 }
 
@@ -201,10 +201,10 @@ export async function getStandupData(date: string): Promise<StandupData> {
   const rows = [...rowByUser.values()]
     .map((row) => ({
       ...row,
-      estHours: [...row.todo, ...row.inProgress, ...row.done].reduce(
-        (sum, t) => sum + (t.estimate_hours ?? 0),
-        0
-      ),
+      estHours:
+        Math.round(
+          row.done.reduce((sum, t) => sum + (t.time_taken_hours ?? 0), 0) * 100
+        ) / 100,
     }))
     .sort((a, b) => a.profile.full_name.localeCompare(b.profile.full_name));
 

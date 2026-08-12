@@ -16,7 +16,7 @@ type WorkloadRow = {
   user_id: string;
   open_tasks: number;
   in_progress_tasks: number;
-  done_last_7d: number;
+  done_tasks: number;
   last_activity_at: string | null;
 };
 

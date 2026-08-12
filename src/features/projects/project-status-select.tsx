@@ -28,6 +28,9 @@ export function ProjectStatusSelect({
   return (
     <Select
       value={status}
+      items={Object.fromEntries(
+        STATUSES.map((s) => [s, s.charAt(0).toUpperCase() + s.slice(1)])
+      )}
       onValueChange={(v) => {
         if (!v || v === status) return;
         startTransition(async () => {

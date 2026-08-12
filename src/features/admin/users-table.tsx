@@ -126,6 +126,9 @@ export function UsersTable({
                 <TableCell>
                   <Select
                     value={u.role}
+                    items={Object.fromEntries(
+                      ROLES.map((r) => [r, r.charAt(0).toUpperCase() + r.slice(1)])
+                    )}
                     onValueChange={(v) =>
                       v && v !== u.role &&
                       run({ id: u.id, role: v as UserRole }, "Role updated")

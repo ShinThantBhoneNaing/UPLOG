@@ -109,7 +109,7 @@ export default async function ReportsPage({
     user_id: string;
     open_tasks: number;
     in_progress_tasks: number;
-    done_last_7d: number;
+    done_tasks: number;
   };
   const workload = ((workloadRows as W[] | null) ?? [])
     .flatMap((w) => {
@@ -224,7 +224,7 @@ export default async function ReportsPage({
                       {w.profile.full_name}
                     </Link>
                     <span className="ml-auto tabular-nums text-muted-foreground">
-                      {w.open_tasks} open · {w.done_last_7d} done/wk
+                      {w.open_tasks} open · {w.done_tasks} done
                     </span>
                   </div>
                   <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-muted">
