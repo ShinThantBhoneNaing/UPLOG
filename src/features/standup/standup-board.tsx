@@ -45,6 +45,7 @@ import { cn } from "@/lib/utils";
 import type { TaskStatus, TaskWithRelations } from "@/types/database";
 import type { StandupData, StandupRow } from "./queries";
 import { StickyCard } from "./sticky-card";
+import { TaskPreviewDialog } from "./task-preview-dialog";
 
 const ALL = "__all__";
 type Column = "todo" | "inProgress" | "done";
@@ -66,11 +67,13 @@ function DraggableSticky({
   column,
   large,
   enabled,
+  onOpen,
 }: {
   task: TaskWithRelations;
   column: Column;
   large: boolean;
   enabled: boolean;
+  onOpen: (task: TaskWithRelations) => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: task.id,
@@ -83,7 +86,7 @@ function DraggableSticky({
       {...attributes}
       className={cn("touch-manipulation", isDragging && "opacity-40")}
     >
-      <StickyCard task={task} column={column} large={large} />
+      <StickyCard task={task} column={column} large={large} onOpen={onOpen} />
     </div>
   );
 }
@@ -147,6 +150,7 @@ export function StandupBoard({
   const [meetingMode, setMeetingMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeTask, setActiveTask] = useState<TaskWithRelations | null>(null);
+  const [previewTask, setPreviewTask] = useState<TaskWithRelations | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
@@ -632,6 +636,7 @@ export function StandupBoard({
                             column={c.key}
                             large={large}
                             enabled={dndEnabled}
+                            onOpen={setPreviewTask}
                           />
                         ))}
                       </DroppableCell>
@@ -666,6 +671,8 @@ export function StandupBoard({
           </DragOverlay>
         </DndContext>
       )}
+
+      <TaskPreviewDialog task={previewTask} onClose={() => setPreviewTask(null)} />
 
       {/* ---------- meeting history ---------- */}
       {!meetingMode && (

@@ -37,28 +37,29 @@ export function StickyCard({
   task,
   column,
   large = false,
+  onOpen,
 }: {
   task: TaskWithRelations;
   column: Column;
   /** Meeting-mode: bigger type for across-the-room readability. */
   large?: boolean;
+  /** When set, clicking opens this handler (popup) instead of navigating. */
+  onOpen?: (task: TaskWithRelations) => void;
 }) {
   const urgent = task.priority === "urgent" || task.priority === "high";
   const paper = PAPER[column];
 
-  return (
-    <Link
-      href={`/tasks/${task.id}`}
-      draggable={false}
-      className={cn(
-        "relative block rounded-md p-3 shadow-sm transition-all duration-150",
-        "hover:rotate-0 hover:shadow-md hover:-translate-y-0.5",
-        "[clip-path:polygon(0_0,100%_0,100%_calc(100%-11px),calc(100%-11px)_100%,0_100%)]",
-        paper.bg,
-        tilt(task.id),
-        column === "done" && "opacity-85"
-      )}
-    >
+  const className = cn(
+    "relative block w-full rounded-md p-3 text-left shadow-sm transition-all duration-150",
+    "hover:rotate-0 hover:shadow-md hover:-translate-y-0.5",
+    "[clip-path:polygon(0_0,100%_0,100%_calc(100%-11px),calc(100%-11px)_100%,0_100%)]",
+    paper.bg,
+    tilt(task.id),
+    column === "done" && "opacity-85"
+  );
+
+  const content = (
+    <>
       {/* folded corner */}
       <span
         aria-hidden
@@ -116,6 +117,19 @@ export function StickyCard({
           </span>
         )}
       </div>
+    </>
+  );
+
+  if (onOpen) {
+    return (
+      <button type="button" onClick={() => onOpen(task)} className={className}>
+        {content}
+      </button>
+    );
+  }
+  return (
+    <Link href={`/tasks/${task.id}`} draggable={false} className={className}>
+      {content}
     </Link>
   );
 }
