@@ -7,17 +7,29 @@ import type { TaskWithRelations } from "@/types/database";
 
 type Column = "todo" | "inProgress" | "done";
 
-/** Subtle status tints on the UPLOG palette — sticky note, not spreadsheet. */
-const TINTS: Record<Column, string> = {
-  todo: "bg-warning/8 border-warning/30 hover:border-warning/50",
-  inProgress: "bg-primary/8 border-primary/30 hover:border-primary/50",
-  done: "bg-success/8 border-success/30 hover:border-success/50",
+/**
+ * Digital sticky note: solid paper tint per status, folded bottom-right
+ * corner, slight tilt that straightens on hover. Calm, not childish.
+ */
+const PAPER: Record<Column, { bg: string; fold: string }> = {
+  todo: {
+    bg: "bg-warning/15 hover:bg-warning/20 dark:bg-warning/12 dark:hover:bg-warning/18",
+    fold: "bg-warning/40",
+  },
+  inProgress: {
+    bg: "bg-primary/12 hover:bg-primary/18 dark:bg-primary/14 dark:hover:bg-primary/20",
+    fold: "bg-primary/40",
+  },
+  done: {
+    bg: "bg-success/12 hover:bg-success/18 dark:bg-success/12 dark:hover:bg-success/18",
+    fold: "bg-success/40",
+  },
 };
 
 /** Tiny deterministic tilt per card — straightens on hover. */
 function tilt(id: string): string {
   const n = id.charCodeAt(0) + id.charCodeAt(id.length - 1);
-  const classes = ["-rotate-1", "rotate-0", "rotate-1", "-rotate-[0.5deg]", "rotate-[0.7deg]"];
+  const classes = ["-rotate-1", "rotate-[0.75deg]", "-rotate-[0.5deg]", "rotate-1", "rotate-0"];
   return classes[n % classes.length];
 }
 
@@ -32,18 +44,30 @@ export function StickyCard({
   large?: boolean;
 }) {
   const urgent = task.priority === "urgent" || task.priority === "high";
+  const paper = PAPER[column];
 
   return (
     <Link
       href={`/tasks/${task.id}`}
       draggable={false}
       className={cn(
-        "block rounded-lg border p-2.5 shadow-xs transition-all hover:rotate-0 hover:shadow-md",
-        TINTS[column],
+        "relative block rounded-md p-3 shadow-sm transition-all duration-150",
+        "hover:rotate-0 hover:shadow-md hover:-translate-y-0.5",
+        "[clip-path:polygon(0_0,100%_0,100%_calc(100%-11px),calc(100%-11px)_100%,0_100%)]",
+        paper.bg,
         tilt(task.id),
         column === "done" && "opacity-85"
       )}
     >
+      {/* folded corner */}
+      <span
+        aria-hidden
+        className={cn(
+          "absolute bottom-0 right-0 size-[11px] [clip-path:polygon(0_0,100%_0,0_100%)]",
+          paper.fold
+        )}
+      />
+
       <p
         className={cn(
           "font-medium leading-snug",
@@ -56,7 +80,7 @@ export function StickyCard({
 
       <div
         className={cn(
-          "mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5",
+          "mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5",
           large ? "text-xs" : "text-[10px]"
         )}
       >
@@ -72,7 +96,7 @@ export function StickyCard({
           </span>
         )}
         {task.time_taken_hours != null && (
-          <span className="tabular-nums font-medium text-foreground/70">
+          <span className="tabular-nums font-semibold text-foreground/70">
             {task.time_taken_hours}h
           </span>
         )}
@@ -82,9 +106,7 @@ export function StickyCard({
           </span>
         )}
         {task.labels[0] && (
-          <span
-            className="inline-flex items-center gap-1 text-muted-foreground"
-          >
+          <span className="inline-flex items-center gap-1 text-muted-foreground">
             <span
               className="size-1.5 rounded-full"
               style={{ backgroundColor: task.labels[0].color }}

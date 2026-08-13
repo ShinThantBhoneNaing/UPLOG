@@ -7,6 +7,7 @@ const PUBLIC_PATHS = [
   "/forgot-password",
   "/reset-password",
   "/auth", // email-link confirmation endpoint
+  "/share", // public read-only stand-up board (token-gated)
 ];
 
 /**
@@ -56,8 +57,15 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Keep users on /reset-password even when authenticated (recovery session).
-  if (user && isPublic && !path.startsWith("/reset-password")) {
+  // Keep users on /reset-password (recovery session), /auth (code exchange)
+  // and /share (public board) even when authenticated.
+  if (
+    user &&
+    isPublic &&
+    !path.startsWith("/reset-password") &&
+    !path.startsWith("/auth") &&
+    !path.startsWith("/share")
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     url.search = "";

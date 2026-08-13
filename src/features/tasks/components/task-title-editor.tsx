@@ -2,12 +2,36 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil } from "lucide-react";
+import { Check, Copy, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { updateTask } from "../actions";
+
+/** Renders plain text with URLs as clickable links. */
+function LinkifiedText({ text }: { text: string }) {
+  const parts = text.split(/(https?:\/\/[^\s<>"')]+)/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        /^https?:\/\//.test(part) ? (
+          <a
+            key={i}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="break-all font-medium text-primary underline underline-offset-2 hover:opacity-80"
+          >
+            {part}
+          </a>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
+}
 
 /** Inline title + description editing for users who can edit the task. */
 export function TaskTitleEditor({
@@ -24,8 +48,20 @@ export function TaskTitleEditor({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [draftTitle, setDraftTitle] = useState(title);
   const [draftDescription, setDraftDescription] = useState(description ?? "");
+
+  async function copyTitle() {
+    try {
+      await navigator.clipboard.writeText(title);
+      setCopied(true);
+      toast.success("Task name copied");
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error("Couldn't copy to clipboard.");
+    }
+  }
 
   function save() {
     startTransition(async () => {
@@ -88,6 +124,19 @@ export function TaskTitleEditor({
         <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
           {title}
         </h1>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="mt-0.5 shrink-0"
+          onClick={() => void copyTitle()}
+          aria-label="Copy task name"
+        >
+          {copied ? (
+            <Check className="text-success" aria-hidden />
+          ) : (
+            <Copy aria-hidden />
+          )}
+        </Button>
         {canEdit && (
           <Button
             variant="ghost"
@@ -102,7 +151,7 @@ export function TaskTitleEditor({
       </div>
       {description ? (
         <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
-          {description}
+          <LinkifiedText text={description} />
         </p>
       ) : (
         canEdit && (

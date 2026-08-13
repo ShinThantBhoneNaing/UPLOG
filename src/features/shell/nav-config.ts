@@ -26,11 +26,11 @@ export const MAIN_NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/standup", label: "Standard Meeting", icon: Presentation },
   { href: "/tasks", label: "My Tasks", icon: CheckSquare },
-  { href: "/projects", label: "Projects", icon: FolderKanban },
-  { href: "/daily", label: "Daily Log", icon: NotebookPen },
+  { href: "/projects", label: "Projects", icon: FolderKanban, roles: ["manager", "admin"] },
+  { href: "/daily", label: "Daily Log", icon: NotebookPen, roles: ["manager", "admin"] },
   { href: "/team", label: "Team", icon: Users },
-  { href: "/activity", label: "Activity", icon: Activity },
-  { href: "/history", label: "History", icon: History },
+  { href: "/activity", label: "Activity", icon: Activity, roles: ["manager", "admin"] },
+  { href: "/history", label: "History", icon: History, roles: ["manager", "admin"] },
 ];
 
 export const SECONDARY_NAV: NavItem[] = [
@@ -49,7 +49,7 @@ export const MOBILE_NAV: NavItem[] = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/standup", label: "Meeting", icon: Presentation },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
-  { href: "/daily", label: "Daily", icon: NotebookPen },
+  { href: "/daily", label: "Daily", icon: NotebookPen, roles: ["manager", "admin"] },
 ];
 
 export function visibleFor(items: NavItem[], role: UserRole): NavItem[] {

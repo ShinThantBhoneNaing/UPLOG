@@ -36,6 +36,7 @@ export interface Profile {
   avatar_url: string | null;
   job_title: string | null;
   department: string | null;
+  phone: string | null;
   role: UserRole;
   is_active: boolean;
   created_at: string;

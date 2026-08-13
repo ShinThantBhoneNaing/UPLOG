@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Plus } from "lucide-react";
+import { ImagePlus, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,32 +25,86 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { TASK_PRIORITIES, PRIORITY_META } from "@/lib/utils";
+import { MAX_FILE_SIZE } from "@/lib/validations/task";
 import type { ProfileLite, TaskPriority } from "@/types/database";
-import { createTask } from "../actions";
+import { createTask, recordAttachment } from "../actions";
 
 const UNSET = "__none__";
+const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
+const MAX_IMAGES = 5;
+
+interface PendingImage {
+  file: File;
+  previewUrl: string;
+}
 
 export function TaskFormDialog({
   profiles,
   projects,
   defaultProjectId,
+  currentUserId,
   trigger,
 }: {
   profiles: ProfileLite[];
   projects: { id: string; name: string }[];
   defaultProjectId?: string;
+  /** New tasks are assigned to this user by default (changeable). */
+  currentUserId?: string;
   trigger?: React.ReactElement;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [projectId, setProjectId] = useState(defaultProjectId ?? UNSET);
-  const [assigneeId, setAssigneeId] = useState(UNSET);
+  const [assigneeId, setAssigneeId] = useState(currentUserId ?? UNSET);
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [dueDate, setDueDate] = useState("");
+  const [images, setImages] = useState<PendingImage[]>([]);
+
+  // Free object URLs when the component unmounts.
+  useEffect(() => {
+    return () => images.forEach((i) => URL.revokeObjectURL(i.previewUrl));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function addImages(files: FileList | null) {
+    if (!files) return;
+    const next: PendingImage[] = [];
+    for (const file of Array.from(files)) {
+      if (!IMAGE_TYPES.has(file.type)) {
+        toast.error(`${file.name}: only PNG, JPEG, GIF or WebP images.`);
+        continue;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(`${file.name}: images can be at most 20 MB.`);
+        continue;
+      }
+      next.push({ file, previewUrl: URL.createObjectURL(file) });
+    }
+    setImages((prev) => [...prev, ...next].slice(0, MAX_IMAGES));
+    if (imageInputRef.current) imageInputRef.current.value = "";
+  }
+
+  function removeImage(index: number) {
+    setImages((prev) => {
+      URL.revokeObjectURL(prev[index]!.previewUrl);
+      return prev.filter((_, i) => i !== index);
+    });
+  }
+
+  function resetForm() {
+    setTitle("");
+    setDescription("");
+    setDueDate("");
+    setAssigneeId(currentUserId ?? UNSET);
+    setPriority("medium");
+    images.forEach((i) => URL.revokeObjectURL(i.previewUrl));
+    setImages([]);
+  }
 
   function submit() {
     startTransition(async () => {
@@ -61,18 +116,43 @@ export function TaskFormDialog({
         priority,
         dueDate: dueDate || null,
       });
-      if (result.ok) {
-        toast.success("Task created");
-        setOpen(false);
-        setTitle("");
-        setDescription("");
-        setDueDate("");
-        setAssigneeId(UNSET);
-        setPriority("medium");
-        router.refresh();
-      } else {
+      if (!result.ok) {
         toast.error(result.error);
+        return;
       }
+
+      // Upload attached images to the new task.
+      if (images.length && result.data && currentUserId) {
+        const supabase = createClient();
+        let failed = 0;
+        for (const img of images) {
+          const safeName = img.file.name.replace(/[^\w.\-() ]+/g, "_").slice(0, 180);
+          const path = `${currentUserId}/${result.data.id}/${crypto.randomUUID()}-${safeName}`;
+          const { error } = await supabase.storage
+            .from("attachments")
+            .upload(path, img.file, { contentType: img.file.type });
+          if (error) {
+            failed++;
+            continue;
+          }
+          const rec = await recordAttachment({
+            taskId: result.data.id,
+            fileName: img.file.name.slice(0, 255),
+            storagePath: path,
+            mimeType: img.file.type,
+            sizeBytes: img.file.size,
+          });
+          if (!rec.ok) failed++;
+        }
+        if (failed > 0) {
+          toast.warning(`Task created, but ${failed} image(s) failed to upload.`);
+        }
+      }
+
+      toast.success("Task created");
+      setOpen(false);
+      resetForm();
+      router.refresh();
     });
   }
 
@@ -87,7 +167,7 @@ export function TaskFormDialog({
           )
         }
       />
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>New task</DialogTitle>
           <DialogDescription>
@@ -121,7 +201,7 @@ export function TaskFormDialog({
               id="task-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add context, links, acceptance criteria… (optional)"
+              placeholder="Add context, links, acceptance criteria… (links become clickable)"
               rows={3}
               maxLength={10000}
             />
@@ -170,6 +250,7 @@ export function TaskFormDialog({
                   {profiles.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.full_name}
+                      {p.id === currentUserId && " (you)"}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -207,7 +288,50 @@ export function TaskFormDialog({
                 onChange={(e) => setDueDate(e.target.value)}
               />
             </div>
+          </div>
 
+          {/* Image attachments with previews */}
+          <div className="space-y-2">
+            <Label>Images</Label>
+            <div className="flex flex-wrap gap-2">
+              {images.map((img, i) => (
+                <div key={img.previewUrl} className="group relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={img.previewUrl}
+                    alt={img.file.name}
+                    className="size-16 rounded-lg border object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(i)}
+                    aria-label={`Remove ${img.file.name}`}
+                    className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 shadow transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                  >
+                    <X className="size-3" aria-hidden />
+                  </button>
+                </div>
+              ))}
+              {images.length < MAX_IMAGES && (
+                <button
+                  type="button"
+                  onClick={() => imageInputRef.current?.click()}
+                  className="flex size-16 items-center justify-center rounded-lg border border-dashed text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
+                  aria-label="Attach images"
+                >
+                  <ImagePlus className="size-5" aria-hidden />
+                </button>
+              )}
+            </div>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/gif,image/webp"
+              multiple
+              className="sr-only"
+              aria-label="Choose images to attach"
+              onChange={(e) => addImages(e.target.files)}
+            />
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

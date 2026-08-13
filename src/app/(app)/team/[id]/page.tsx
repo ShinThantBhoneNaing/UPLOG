@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CheckSquare, Mail } from "lucide-react";
+import { ArrowLeft, CheckSquare, Mail, Phone } from "lucide-react";
 import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -96,7 +96,16 @@ export default async function MemberPage({
           </p>
           <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
             <Mail className="size-3.5" aria-hidden />
-            {member.email} · Joined {formatDate(member.created_at)}
+            {member.email}
+            {member.phone && (
+              <>
+                {" · "}
+                <Phone className="size-3.5" aria-hidden />
+                {member.phone}
+              </>
+            )}
+            {" · Joined "}
+            {formatDate(member.created_at)}
           </p>
         </div>
       </div>

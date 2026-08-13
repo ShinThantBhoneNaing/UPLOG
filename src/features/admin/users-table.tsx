@@ -51,6 +51,7 @@ export function UsersTable({
   const [fullName, setFullName] = useState("");
   const [jobTitle, setJobTitle] = useState("");
   const [department, setDepartment] = useState("");
+  const [phone, setPhone] = useState("");
 
   function run(action: Parameters<typeof adminUpdateUser>[0], success?: string) {
     startTransition(async () => {
@@ -69,6 +70,7 @@ export function UsersTable({
     setFullName(u.full_name);
     setJobTitle(u.job_title ?? "");
     setDepartment(u.department ?? "");
+    setPhone(u.phone ?? "");
   }
 
   function saveEdit() {
@@ -79,6 +81,7 @@ export function UsersTable({
         fullName: fullName.trim(),
         jobTitle: jobTitle.trim() || null,
         department: department.trim() || null,
+        phone: phone.trim() || null,
       },
       "User updated"
     );
@@ -217,6 +220,16 @@ export function UsersTable({
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
                 maxLength={120}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-phone">Phone number</Label>
+              <Input
+                id="edit-phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                maxLength={40}
               />
             </div>
           </div>

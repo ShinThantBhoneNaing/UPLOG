@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, CheckSquare, Plus } from "lucide-react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,7 @@ export default async function ProjectDetailPage({
   if (!z.uuid().safeParse(id).success) notFound();
 
   const profile = await getCurrentProfile();
+  if (profile.role === "member") redirect("/dashboard");
   const supabase = await createClient();
 
   const [
@@ -133,6 +134,7 @@ export default async function ProjectDetailPage({
               profiles={profiles ?? []}
               projects={[{ id: project.id, name: project.name }]}
               defaultProjectId={project.id}
+              currentUserId={profile.id}
               trigger={
                 <Button variant="outline" size="sm">
                   <Plus aria-hidden /> Add task

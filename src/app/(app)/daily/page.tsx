@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { format, subDays } from "date-fns";
 import { NotebookPen } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
@@ -16,6 +17,7 @@ type UpdateWithAuthor = DailyUpdate & { author: ProfileLite | null };
 
 export default async function DailyPage() {
   const profile = await getCurrentProfile();
+  if (profile.role === "member") redirect("/dashboard");
   const supabase = await createClient();
   const today = new Date().toISOString().slice(0, 10);
 

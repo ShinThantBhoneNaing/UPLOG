@@ -216,7 +216,7 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {!myUpdate && (
+      {!myUpdate && isManager && (
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3">
           <div className="flex items-center gap-3">
             <NotebookPen className="size-5 text-primary" aria-hidden />

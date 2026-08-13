@@ -26,6 +26,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
   const [fullName, setFullName] = useState(profile.full_name);
   const [jobTitle, setJobTitle] = useState(profile.job_title ?? "");
   const [department, setDepartment] = useState(profile.department ?? "");
+  const [phone, setPhone] = useState(profile.phone ?? "");
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url);
 
   async function uploadAvatar(file: File) {
@@ -66,6 +67,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
         fullName,
         jobTitle,
         department,
+        phone,
         avatarUrl,
       });
       if (result.ok) {
@@ -147,6 +149,18 @@ export function ProfileForm({ profile }: { profile: Profile }) {
           onChange={(e) => setDepartment(e.target.value)}
           placeholder="e.g. Engineering"
           maxLength={120}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="settings-phone">Phone number</Label>
+        <Input
+          id="settings-phone"
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="e.g. +95 9 123 456 789"
+          maxLength={40}
+          autoComplete="tel"
         />
       </div>
       <div className="space-y-2">

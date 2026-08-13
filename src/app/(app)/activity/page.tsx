@@ -6,6 +6,8 @@ import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { ActivityItem } from "@/features/activity/activity-item";
 import { ACTIVITY_WITH_ACTOR } from "@/features/tasks/queries";
+import { redirect } from "next/navigation";
+import { getCurrentProfile } from "@/features/shell/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
 import type { ActivityWithActor } from "@/types/database";
 
@@ -19,6 +21,9 @@ function dayLabel(iso: string): string {
 }
 
 export default async function ActivityPage() {
+  const viewer = await getCurrentProfile();
+  if (viewer.role === "member") redirect("/dashboard");
+
   const supabase = await createClient();
 
   const { data: activities } = await supabase

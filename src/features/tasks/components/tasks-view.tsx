@@ -200,7 +200,7 @@ export function TasksView({
           </Select>
         )}
 
-        <TaskFormDialog profiles={profiles} projects={projects} />
+        <TaskFormDialog profiles={profiles} projects={projects} currentUserId={currentUserId} />
       </div>
 
       {filtered.length === 0 ? (
@@ -214,7 +214,7 @@ export function TasksView({
           }
           action={
             !query && status === ALL ? (
-              <TaskFormDialog profiles={profiles} projects={projects} />
+              <TaskFormDialog profiles={profiles} projects={projects} currentUserId={currentUserId} />
             ) : undefined
           }
         />

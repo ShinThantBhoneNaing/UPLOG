@@ -16,6 +16,7 @@ import {
 } from "@dnd-kit/core";
 import {
   CalendarDays,
+  Share2,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
@@ -117,7 +118,16 @@ function DroppableCell({
 
 /* ---------------- main board ---------------- */
 
-export function StandupBoard({ data }: { data: StandupData }) {
+export function StandupBoard({
+  data,
+  currentUserId,
+  shareToken,
+}: {
+  data: StandupData;
+  currentUserId: string;
+  /** Present for managers/admins: enables the public share-link button. */
+  shareToken?: string | null;
+}) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -332,6 +342,21 @@ export function StandupBoard({ data }: { data: StandupData }) {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {shareToken && !meetingMode && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const url = `${window.location.origin}/share/standup/${shareToken}`;
+                void navigator.clipboard
+                  .writeText(url)
+                  .then(() => toast.success("Share link copied — anyone with it can view today's board (read-only)."))
+                  .catch(() => toast.error("Couldn't copy the link."));
+              }}
+            >
+              <Share2 aria-hidden /> Share
+            </Button>
+          )}
           <Button
             variant={meetingMode ? "default" : "outline"}
             size="sm"
@@ -531,7 +556,7 @@ export function StandupBoard({ data }: { data: StandupData }) {
           }
           action={
             data.isToday ? (
-              <TaskFormDialog profiles={data.profiles} projects={data.projects} />
+              <TaskFormDialog profiles={data.profiles} projects={data.projects} currentUserId={currentUserId} />
             ) : undefined
           }
         />

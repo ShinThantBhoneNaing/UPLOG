@@ -30,7 +30,7 @@ export default async function AppLayout({
         </main>
       </div>
 
-      <MobileNav />
+      <MobileNav role={profile.role} />
     </div>
   );
 }

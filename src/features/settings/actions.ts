@@ -11,6 +11,7 @@ const profileSchema = z.object({
   fullName: z.string().trim().min(2, "Enter your full name").max(120),
   jobTitle: z.string().trim().max(120).optional(),
   department: z.string().trim().max(120).optional(),
+  phone: z.string().trim().max(40).optional(),
   avatarUrl: z.url().max(500).nullable().optional(),
 });
 
@@ -34,6 +35,7 @@ export async function updateOwnProfile(
       full_name: d.fullName,
       job_title: d.jobTitle || null,
       department: d.department || null,
+      phone: d.phone || null,
     };
     if (d.avatarUrl !== undefined) patch.avatar_url = d.avatarUrl;
 

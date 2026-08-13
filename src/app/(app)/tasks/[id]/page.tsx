@@ -91,7 +91,7 @@ export default async function TaskDetailPage({
     isManager ||
     task.creator_id === profile.id ||
     task.assignee?.id === profile.id;
-  const canDelete = isManager || task.creator_id === profile.id;
+  const canDelete = isManager; // managers/admins only (enforced by RLS too)
 
   return (
     <div>

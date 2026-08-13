@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { FolderKanban } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +26,7 @@ type ProjectWithOwner = Project & { owner: ProfileLite | null };
 
 export default async function ProjectsPage() {
   const profile = await getCurrentProfile();
+  if (profile.role === "member") redirect("/dashboard");
   const supabase = await createClient();
 
   const [{ data: projects }, { data: stats }] = await Promise.all([

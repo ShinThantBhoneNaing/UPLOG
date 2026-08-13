@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Download, FileIcon, Loader2, Paperclip, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -27,6 +27,29 @@ export function Attachments({
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [previews, setPreviews] = useState<Record<string, string>>({});
+
+  // Signed preview URLs for image attachments (private bucket).
+  useEffect(() => {
+    const imageAtts = attachments.filter((a) => a.mime_type.startsWith("image/"));
+    if (imageAtts.length === 0) return;
+    let cancelled = false;
+    const supabase = createClient();
+    void (async () => {
+      const { data } = await supabase.storage
+        .from("attachments")
+        .createSignedUrls(imageAtts.map((a) => a.storage_path), 3600);
+      if (cancelled || !data) return;
+      const map: Record<string, string> = {};
+      data.forEach((d, i) => {
+        if (d.signedUrl) map[imageAtts[i]!.id] = d.signedUrl;
+      });
+      setPreviews(map);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [attachments]);
 
   async function upload(file: File) {
     if (file.size > MAX_FILE_SIZE) {
@@ -138,7 +161,23 @@ export function Attachments({
               key={att.id}
               className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2"
             >
-              <FileIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+              {previews[att.id] ? (
+                <button
+                  type="button"
+                  onClick={() => void download(att)}
+                  aria-label={`Preview ${att.file_name}`}
+                  className="shrink-0"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={previews[att.id]}
+                    alt={att.file_name}
+                    className="size-12 rounded-md border object-cover transition-transform hover:scale-105"
+                  />
+                </button>
+              ) : (
+                <FileIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+              )}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{att.file_name}</p>
                 <p className="text-xs text-muted-foreground">

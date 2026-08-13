@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { ActivityItem } from "@/features/activity/activity-item";
 import { HistoryFilters } from "@/features/history/history-filters";
 import { ACTIVITY_WITH_ACTOR } from "@/features/tasks/queries";
+import { redirect } from "next/navigation";
+import { getCurrentProfile } from "@/features/shell/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateShort } from "@/lib/utils";
 import type { ActivityWithActor, ProfileLite } from "@/types/database";
@@ -38,6 +40,9 @@ export default async function HistoryPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const viewer = await getCurrentProfile();
+  if (viewer.role === "member") redirect("/dashboard");
+
   const raw = await searchParams;
   const parsed = filterSchema.safeParse(
     Object.fromEntries(

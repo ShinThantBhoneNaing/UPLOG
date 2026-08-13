@@ -12,6 +12,7 @@ const adminUpdateUserSchema = z.object({
   fullName: z.string().trim().min(1).max(120).optional(),
   jobTitle: z.string().trim().max(120).nullable().optional(),
   department: z.string().trim().max(120).nullable().optional(),
+  phone: z.string().trim().max(40).nullable().optional(),
   role: z.enum(["admin", "manager", "member"]).optional(),
   isActive: z.boolean().optional(),
 });
@@ -48,6 +49,7 @@ export async function adminUpdateUser(
     if (d.fullName !== undefined) patch.full_name = d.fullName;
     if (d.jobTitle !== undefined) patch.job_title = d.jobTitle;
     if (d.department !== undefined) patch.department = d.department;
+    if (d.phone !== undefined) patch.phone = d.phone;
     if (d.role !== undefined) patch.role = d.role;
     if (d.isActive !== undefined) patch.is_active = d.isActive;
 
