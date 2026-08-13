@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import {
   formatDate,
+  formatHours,
   PRIORITY_META,
   STATUS_META,
   TASK_PRIORITIES,
@@ -198,7 +199,7 @@ export function TaskProperties({
           <p className="rounded-lg border bg-muted/40 px-3 py-2 text-sm tabular-nums">
             {task.time_taken_hours != null ? (
               <>
-                <span className="font-semibold">{task.time_taken_hours}h</span>
+                <span className="font-semibold">{formatHours(task.time_taken_hours)}</span>
                 <span className="ml-1.5 text-xs text-muted-foreground">
                   in progress → done
                 </span>

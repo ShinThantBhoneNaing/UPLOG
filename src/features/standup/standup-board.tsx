@@ -41,7 +41,7 @@ import {
 import { UserAvatar } from "@/components/user-avatar";
 import { updateTask } from "@/features/tasks/actions";
 import { TaskFormDialog } from "@/features/tasks/components/task-form-dialog";
-import { cn } from "@/lib/utils";
+import { cn, formatHours } from "@/lib/utils";
 import type { TaskStatus, TaskWithRelations } from "@/types/database";
 import type { StandupData, StandupRow } from "./queries";
 import { StickyCard } from "./sticky-card";
@@ -539,9 +539,11 @@ export function StandupBoard({
           </span>
         ))}
         <span className="ml-auto flex items-baseline gap-1.5">
-          <span className="font-semibold tabular-nums">{totalEst || "—"}</span>
+          <span className="font-semibold tabular-nums">
+            {totalEst ? formatHours(totalEst) : "—"}
+          </span>
           <span className="text-muted-foreground">
-            {totalEst ? "h tracked" : "no time tracked yet"}
+            {totalEst ? "tracked" : "no time tracked yet"}
           </span>
         </span>
       </div>
@@ -650,8 +652,7 @@ export function StandupBoard({
                     >
                       {row.estHours ? (
                         <span className="font-semibold">
-                          {row.estHours}h
-
+                          {formatHours(row.estHours)}
                         </span>
                       ) : (
                         <span className="text-muted-foreground">—</span>

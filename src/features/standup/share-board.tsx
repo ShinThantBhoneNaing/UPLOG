@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { UserAvatar } from "@/components/user-avatar";
-import { cn } from "@/lib/utils";
+import { cn, formatHours } from "@/lib/utils";
 
 /* Shapes returned by the get_standup_share RPC */
 export interface ShareTask {
@@ -103,7 +103,7 @@ function ShareSticky({
         )}
         {task.time_taken_hours != null && (
           <span className="tabular-nums font-semibold text-foreground/70">
-            {task.time_taken_hours}h
+            {formatHours(task.time_taken_hours)}
           </span>
         )}
         {task.project && (
@@ -233,8 +233,10 @@ export function ShareBoard({ data }: { data: ShareData }) {
         <span><span className="font-semibold tabular-nums">{totals.inProgress}</span> <span className="text-muted-foreground">In Progress</span></span>
         <span><span className="font-semibold tabular-nums">{totals.done}</span> <span className="text-muted-foreground">Done</span></span>
         <span className="ml-auto">
-          <span className="font-semibold tabular-nums">{totals.hours || "—"}</span>{" "}
-          <span className="text-muted-foreground">{totals.hours ? "h tracked" : ""}</span>
+          <span className="font-semibold tabular-nums">
+            {totals.hours ? formatHours(totals.hours) : "—"}
+          </span>{" "}
+          <span className="text-muted-foreground">{totals.hours ? "tracked" : ""}</span>
         </span>
       </div>
 

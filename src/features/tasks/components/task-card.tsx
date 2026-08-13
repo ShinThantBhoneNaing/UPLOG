@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { UserAvatar } from "@/components/user-avatar";
-import { cn } from "@/lib/utils";
+import { cn, formatHours } from "@/lib/utils";
 import type { TaskWithRelations } from "@/types/database";
 import { DueBadge, LabelChip, PriorityBadge } from "./badges";
 
@@ -48,7 +48,7 @@ export function TaskCard({
           )}
           {task.time_taken_hours != null && (
             <span className="text-xs tabular-nums text-muted-foreground">
-              {task.time_taken_hours}h
+              {formatHours(task.time_taken_hours)}
             </span>
           )}
         </div>

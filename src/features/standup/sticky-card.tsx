@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Flag } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatHours } from "@/lib/utils";
 import type { TaskWithRelations } from "@/types/database";
 
 type Column = "todo" | "inProgress" | "done";
@@ -98,7 +98,7 @@ export function StickyCard({
         )}
         {task.time_taken_hours != null && (
           <span className="tabular-nums font-semibold text-foreground/70">
-            {task.time_taken_hours}h
+            {formatHours(task.time_taken_hours)}
           </span>
         )}
         {task.project && (

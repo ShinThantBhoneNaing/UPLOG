@@ -45,6 +45,16 @@ export function dueLabel(iso: string): { label: string; overdue: boolean } {
   return { label: format(d, "MMM d"), overdue: isPast(d) };
 }
 
+/** 2.5 → "2h 30m" · 0.75 → "45m" · 3 → "3h" · 0 → "0m" */
+export function formatHours(hours: number): string {
+  const totalMinutes = Math.round(hours * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;

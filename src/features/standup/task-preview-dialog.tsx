@@ -16,6 +16,7 @@ import {
   PriorityBadge,
   StatusBadge,
 } from "@/features/tasks/components/badges";
+import { formatHours } from "@/lib/utils";
 import type { TaskWithRelations } from "@/types/database";
 
 /**
@@ -80,7 +81,7 @@ export function TaskPreviewDialog({
                   <dt className="w-20 shrink-0 text-muted-foreground">Time taken</dt>
                   <dd className="flex items-center gap-1.5 font-semibold tabular-nums">
                     <Clock className="size-3.5 text-muted-foreground" aria-hidden />
-                    {task.time_taken_hours}h
+                    {formatHours(task.time_taken_hours)}
                   </dd>
                 </div>
               )}
