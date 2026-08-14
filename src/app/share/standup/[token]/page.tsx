@@ -15,11 +15,21 @@ export const metadata: Metadata = {
  */
 export default async function SharedStandupPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ date?: string }>;
 }) {
   const { token } = await params;
   if (!z.uuid().safeParse(token).success) notFound();
+
+  const { date: rawDate } = await searchParams;
+  const today = new Date().toISOString().slice(0, 10);
+  const parsedDate = z.iso.date().safeParse(rawDate);
+  const date =
+    parsedDate.success && parsedDate.data <= today && parsedDate.data >= "2020-01-01"
+      ? parsedDate.data
+      : today;
 
   // Plain anon client — deliberately no cookies/session.
   const supabase = createAnonClient(
@@ -30,9 +40,10 @@ export default async function SharedStandupPage({
 
   const { data, error } = await supabase.rpc("get_standup_share", {
     p_token: token,
+    p_date: date,
   });
 
   if (error || !data) notFound();
 
-  return <ShareBoard data={data as unknown as ShareData} />;
+  return <ShareBoard data={data as unknown as ShareData} token={token} />;
 }

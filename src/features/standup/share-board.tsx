@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { format, parseISO } from "date-fns";
-import { Flag, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { addDays, format, parseISO } from "date-fns";
+import { CalendarDays, ChevronLeft, ChevronRight, Flag, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/brand/logo";
 import { Input } from "@/components/ui/input";
 import {
@@ -115,10 +117,29 @@ function ShareSticky({
 }
 
 /** Read-only public stand-up board (meeting-mode look, no login). */
-export function ShareBoard({ data }: { data: ShareData }) {
+export function ShareBoard({
+  data,
+  token,
+}: {
+  data: ShareData;
+  token: string;
+}) {
+  const router = useRouter();
   const [employee, setEmployee] = useState<string>(ALL);
   const [status, setStatus] = useState<string>(ALL);
   const [query, setQuery] = useState("");
+
+  const today = format(new Date(), "yyyy-MM-dd");
+  const yesterday = format(addDays(parseISO(`${today}T00:00:00`), -1), "yyyy-MM-dd");
+  function go(date: string) {
+    router.push(
+      date === today
+        ? `/share/standup/${token}`
+        : `/share/standup/${token}?date=${date}`
+    );
+  }
+  const shift = (days: number) =>
+    go(format(addDays(parseISO(`${data.date}T00:00:00`), days), "yyyy-MM-dd"));
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -168,6 +189,64 @@ export function ShareBoard({ data }: { data: ShareData }) {
           Read-only shared view · {data.workspace}
         </p>
       </header>
+
+      {/* date navigation */}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="flex items-center rounded-lg border bg-card">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => shift(-1)}
+            aria-label="Previous day"
+          >
+            <ChevronLeft aria-hidden />
+          </Button>
+          <span className="min-w-48 px-2 text-center text-sm font-medium tabular-nums">
+            {data.date === today
+              ? "Today"
+              : data.date === yesterday
+                ? "Yesterday"
+                : format(parseISO(`${data.date}T00:00:00`), "EEE, MMM d, yyyy")}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => shift(1)}
+            disabled={data.date >= today}
+            aria-label="Next day"
+          >
+            <ChevronRight aria-hidden />
+          </Button>
+        </div>
+        <Button
+          variant={data.date === today ? "default" : "outline"}
+          size="sm"
+          onClick={() => go(today)}
+        >
+          Today
+        </Button>
+        <Button
+          variant={data.date === yesterday ? "default" : "outline"}
+          size="sm"
+          onClick={() => go(yesterday)}
+        >
+          Yesterday
+        </Button>
+        <label className="relative inline-flex items-center">
+          <span className="sr-only">Pick a date</span>
+          <CalendarDays
+            className="pointer-events-none absolute left-2.5 size-4 text-muted-foreground"
+            aria-hidden
+          />
+          <Input
+            type="date"
+            value={data.date}
+            max={today}
+            onChange={(e) => e.target.value && go(e.target.value)}
+            className="h-8 w-40 pl-8 text-sm"
+          />
+        </label>
+      </div>
 
       {/* filters */}
       <div className="mb-4 flex flex-wrap items-center gap-2">

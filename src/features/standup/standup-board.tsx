@@ -16,7 +16,9 @@ import {
 } from "@dnd-kit/core";
 import {
   CalendarDays,
+  FolderKanban,
   Share2,
+  Users,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
@@ -38,8 +40,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserAvatar } from "@/components/user-avatar";
 import { updateTask } from "@/features/tasks/actions";
+import { notifyMoveAttempt } from "./actions";
 import { TaskFormDialog } from "@/features/tasks/components/task-form-dialog";
 import { cn, formatHours } from "@/lib/utils";
 import type { TaskStatus, TaskWithRelations } from "@/types/database";
@@ -48,6 +52,7 @@ import { StickyCard } from "./sticky-card";
 import { TaskPreviewDialog } from "./task-preview-dialog";
 
 const ALL = "__all__";
+const NOPROJ = "__noproj__";
 type Column = "todo" | "inProgress" | "done";
 const COLUMN_STATUS: Record<Column, TaskStatus> = {
   todo: "todo",
@@ -59,6 +64,12 @@ const COLUMNS: { key: Column; label: string; dot: string }[] = [
   { key: "inProgress", label: "In Progress", dot: "bg-primary" },
   { key: "done", label: "Done", dot: "bg-success" },
 ];
+
+function tiltForGroup(key: string): string {
+  const n = key.charCodeAt(0) + key.charCodeAt(key.length - 1);
+  const classes = ["-rotate-[0.6deg]", "rotate-[0.4deg]", "rotate-0", "-rotate-[0.3deg]", "rotate-[0.6deg]"];
+  return classes[n % classes.length];
+}
 
 /* ---------------- drag & drop wrappers ---------------- */
 
@@ -148,6 +159,7 @@ export function StandupBoard({
   const [status, setStatus] = useState<string>(ALL);
   const [query, setQuery] = useState("");
   const [meetingMode, setMeetingMode] = useState(false);
+  const [grouping, setGrouping] = useState<"project" | "employee">("project");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeTask, setActiveTask] = useState<TaskWithRelations | null>(null);
   const [previewTask, setPreviewTask] = useState<TaskWithRelations | null>(null);
@@ -228,6 +240,15 @@ export function StandupBoard({
     const found = findTask(String(e.active.id));
     if (!found || found.row.profile.id !== userId || found.column === toColumn) return;
 
+    // Only the assignee may move their own ticket on the meeting board.
+    if (found.task.assignee && found.task.assignee.id !== currentUserId) {
+      toast.warning(
+        `Only ${found.task.assignee.full_name} can move this ticket. They've been notified — talk to them if something needs to change.`
+      );
+      void notifyMoveAttempt(found.task.id);
+      return;
+    }
+
     const prev = rows;
     // 1. optimistic move
     setRows((rs) =>
@@ -263,7 +284,11 @@ export function StandupBoard({
   const filteredRows = useMemo(() => {
     const q = query.trim().toLowerCase();
     const matches = (t: TaskWithRelations) =>
-      (project === ALL || t.project?.id === project) &&
+      (project === ALL
+        ? true
+        : project === NOPROJ
+          ? !t.project
+          : t.project?.id === project) &&
       (q === "" || t.title.toLowerCase().includes(q));
     return rows
       .filter((r) => employee === ALL || r.profile.id === employee)
@@ -291,6 +316,41 @@ export function StandupBoard({
   const hasAnyTask = rows.some(
     (r) => r.todo.length + r.inProgress.length + r.done.length > 0
   );
+
+  // Step 1 view: one card per project with ticket counts.
+  const projectGroups = useMemo(() => {
+    const groups = new Map<
+      string,
+      { id: string | null; name: string; todo: number; inProgress: number; done: number }
+    >();
+    for (const r of filteredRows) {
+      for (const [col, list] of [
+        ["todo", r.todo],
+        ["inProgress", r.inProgress],
+        ["done", r.done],
+      ] as const) {
+        for (const t of list) {
+          const key = t.project?.id ?? "__none__";
+          let g = groups.get(key);
+          if (!g) {
+            g = {
+              id: t.project?.id ?? null,
+              name: t.project?.name ?? "No project",
+              todo: 0,
+              inProgress: 0,
+              done: 0,
+            };
+            groups.set(key, g);
+          }
+          g[col] += 1;
+        }
+      }
+    }
+    return [...groups.values()].sort(
+      (a, b) =>
+        b.todo + b.inProgress + b.done - (a.todo + a.inProgress + a.done)
+    );
+  }, [filteredRows]);
   const dndEnabled = data.isToday;
   const large = meetingMode;
 
@@ -525,6 +585,35 @@ export function StandupBoard({
         )}
       </div>
 
+      {/* ---------- view toggle ---------- */}
+      <div className="mb-4 flex items-center gap-2">
+        <Tabs
+          value={grouping}
+          onValueChange={(v) => setGrouping(v as "project" | "employee")}
+        >
+          <TabsList>
+            <TabsTrigger value="project" aria-label="Group by project">
+              <FolderKanban className="size-4" aria-hidden /> Projects
+            </TabsTrigger>
+            <TabsTrigger value="employee" aria-label="Board by employee">
+              <Users className="size-4" aria-hidden /> Board
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        {grouping === "employee" && project !== ALL && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setProject(ALL);
+              setGrouping("project");
+            }}
+          >
+            <ChevronLeft aria-hidden /> All projects
+          </Button>
+        )}
+      </div>
+
       {/* ---------- summary ---------- */}
       <div
         className={cn(
@@ -566,6 +655,75 @@ export function StandupBoard({
             ) : undefined
           }
         />
+      ) : grouping === "project" ? (
+        <div
+          className={cn(
+            "grid gap-4",
+            meetingMode
+              ? "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+              : "sm:grid-cols-2 lg:grid-cols-3"
+          )}
+        >
+          {projectGroups.map((g) => {
+            const total = g.todo + g.inProgress + g.done;
+            return (
+              <button
+                key={g.id ?? NOPROJ}
+                type="button"
+                onClick={() => {
+                  setProject(g.id ?? NOPROJ);
+                  setGrouping("employee");
+                }}
+                className={cn(
+                  "relative rounded-md border-0 bg-accent p-5 text-left shadow-sm transition-all",
+                  "hover:-translate-y-0.5 hover:rotate-0 hover:shadow-md",
+                  "[clip-path:polygon(0_0,100%_0,100%_calc(100%-14px),calc(100%-14px)_100%,0_100%)]",
+                  tiltForGroup(g.id ?? g.name)
+                )}
+              >
+                <span
+                  aria-hidden
+                  className="absolute bottom-0 right-0 size-[14px] bg-primary/30 [clip-path:polygon(0_0,100%_0,0_100%)]"
+                />
+                <div className="flex items-start justify-between gap-2">
+                  <p
+                    className={cn(
+                      "font-semibold leading-snug",
+                      meetingMode ? "text-lg" : "text-base"
+                    )}
+                  >
+                    {g.name}
+                  </p>
+                  <span className="rounded-full bg-primary/15 px-2.5 py-0.5 text-sm font-bold tabular-nums text-primary">
+                    {total}
+                  </span>
+                </div>
+                <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <span className="size-2 rounded-full bg-warning" aria-hidden />
+                    {g.todo} to do
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="size-2 rounded-full bg-primary" aria-hidden />
+                    {g.inProgress} in progress
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="size-2 rounded-full bg-success" aria-hidden />
+                    {g.done} done
+                  </span>
+                </div>
+                <p className="mt-3 text-xs font-medium text-primary">
+                  Open board →
+                </p>
+              </button>
+            );
+          })}
+          {projectGroups.length === 0 && (
+            <p className="col-span-full rounded-xl border border-dashed px-6 py-12 text-center text-sm text-muted-foreground">
+              No tasks match the current filters.
+            </p>
+          )}
+        </div>
       ) : (
         <DndContext
           sensors={sensors}
