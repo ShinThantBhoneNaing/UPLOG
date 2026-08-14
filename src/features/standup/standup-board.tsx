@@ -159,7 +159,7 @@ export function StandupBoard({
   const [status, setStatus] = useState<string>(ALL);
   const [query, setQuery] = useState("");
   const [meetingMode, setMeetingMode] = useState(false);
-  const [grouping, setGrouping] = useState<"project" | "employee">("project");
+  const [grouping, setGrouping] = useState<"project" | "employee">("employee");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeTask, setActiveTask] = useState<TaskWithRelations | null>(null);
   const [previewTask, setPreviewTask] = useState<TaskWithRelations | null>(null);
@@ -317,39 +317,43 @@ export function StandupBoard({
     (r) => r.todo.length + r.inProgress.length + r.done.length > 0
   );
 
-  // Step 1 view: one card per project with ticket counts.
-  const projectGroups = useMemo(() => {
-    const groups = new Map<
-      string,
-      { id: string | null; name: string; todo: number; inProgress: number; done: number }
-    >();
-    for (const r of filteredRows) {
-      for (const [col, list] of [
-        ["todo", r.todo],
-        ["inProgress", r.inProgress],
-        ["done", r.done],
-      ] as const) {
-        for (const t of list) {
-          const key = t.project?.id ?? "__none__";
-          let g = groups.get(key);
-          if (!g) {
-            g = {
-              id: t.project?.id ?? null,
-              name: t.project?.name ?? "No project",
-              todo: 0,
-              inProgress: 0,
-              done: 0,
-            };
-            groups.set(key, g);
+  // Project view: for each employee, which projects they are working on.
+  const employeeProjects = useMemo(() => {
+    return filteredRows
+      .map((r) => {
+        const groups = new Map<
+          string,
+          { id: string | null; name: string; todo: number; inProgress: number; done: number }
+        >();
+        for (const [col, list] of [
+          ["todo", r.todo],
+          ["inProgress", r.inProgress],
+          ["done", r.done],
+        ] as const) {
+          for (const t of list) {
+            const key = t.project?.id ?? "__none__";
+            let g = groups.get(key);
+            if (!g) {
+              g = {
+                id: t.project?.id ?? null,
+                name: t.project?.name ?? "No project",
+                todo: 0,
+                inProgress: 0,
+                done: 0,
+              };
+              groups.set(key, g);
+            }
+            g[col] += 1;
           }
-          g[col] += 1;
         }
-      }
-    }
-    return [...groups.values()].sort(
-      (a, b) =>
-        b.todo + b.inProgress + b.done - (a.todo + a.inProgress + a.done)
-    );
+        return {
+          profile: r.profile,
+          projects: [...groups.values()].sort(
+            (a, b) => b.todo + b.inProgress + b.done - (a.todo + a.inProgress + a.done)
+          ),
+        };
+      })
+      .filter((e) => e.projects.length > 0);
   }, [filteredRows]);
   const dndEnabled = data.isToday;
   const large = meetingMode;
@@ -606,6 +610,7 @@ export function StandupBoard({
             size="sm"
             onClick={() => {
               setProject(ALL);
+              setEmployee(ALL);
               setGrouping("project");
             }}
           >
@@ -656,72 +661,108 @@ export function StandupBoard({
           }
         />
       ) : grouping === "project" ? (
-        <div
-          className={cn(
-            "grid gap-4",
-            meetingMode
-              ? "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-              : "sm:grid-cols-2 lg:grid-cols-3"
-          )}
-        >
-          {projectGroups.map((g) => {
-            const total = g.todo + g.inProgress + g.done;
-            return (
-              <button
-                key={g.id ?? NOPROJ}
-                type="button"
-                onClick={() => {
-                  setProject(g.id ?? NOPROJ);
-                  setGrouping("employee");
-                }}
-                className={cn(
-                  "relative rounded-md border-0 bg-accent p-5 text-left shadow-sm transition-all",
-                  "hover:-translate-y-0.5 hover:rotate-0 hover:shadow-md",
-                  "[clip-path:polygon(0_0,100%_0,100%_calc(100%-14px),calc(100%-14px)_100%,0_100%)]",
-                  tiltForGroup(g.id ?? g.name)
-                )}
-              >
-                <span
-                  aria-hidden
-                  className="absolute bottom-0 right-0 size-[14px] bg-primary/30 [clip-path:polygon(0_0,100%_0,0_100%)]"
-                />
-                <div className="flex items-start justify-between gap-2">
-                  <p
-                    className={cn(
-                      "font-semibold leading-snug",
-                      meetingMode ? "text-lg" : "text-base"
-                    )}
-                  >
-                    {g.name}
-                  </p>
-                  <span className="rounded-full bg-primary/15 px-2.5 py-0.5 text-sm font-bold tabular-nums text-primary">
-                    {total}
-                  </span>
-                </div>
-                <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1.5">
-                    <span className="size-2 rounded-full bg-warning" aria-hidden />
-                    {g.todo} to do
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="size-2 rounded-full bg-primary" aria-hidden />
-                    {g.inProgress} in progress
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="size-2 rounded-full bg-success" aria-hidden />
-                    {g.done} done
-                  </span>
-                </div>
-                <p className="mt-3 text-xs font-medium text-primary">
-                  Open board →
-                </p>
-              </button>
-            );
-          })}
-          {projectGroups.length === 0 && (
-            <p className="col-span-full rounded-xl border border-dashed px-6 py-12 text-center text-sm text-muted-foreground">
+        <div className="space-y-5">
+          {employeeProjects.length === 0 ? (
+            <p className="rounded-xl border border-dashed px-6 py-12 text-center text-sm text-muted-foreground">
               No tasks match the current filters.
             </p>
+          ) : (
+            employeeProjects.map((e) => (
+              <section
+                key={e.profile.id}
+                aria-label={`Projects for ${e.profile.full_name}`}
+                className="rounded-xl border bg-card p-4"
+              >
+                <div className="mb-3 flex items-center gap-2.5">
+                  <UserAvatar
+                    name={e.profile.full_name}
+                    avatarUrl={e.profile.avatar_url}
+                    className={meetingMode ? "size-10" : "size-8"}
+                  />
+                  <div className="min-w-0">
+                    <p
+                      className={cn(
+                        "truncate font-semibold",
+                        meetingMode ? "text-base" : "text-sm"
+                      )}
+                    >
+                      {e.profile.full_name}
+                    </p>
+                    {e.profile.job_title && (
+                      <p className="truncate text-xs text-muted-foreground">
+                        {e.profile.job_title}
+                      </p>
+                    )}
+                  </div>
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {e.projects.length}{" "}
+                    {e.projects.length === 1 ? "project" : "projects"}
+                  </span>
+                </div>
+
+                <div
+                  className={cn(
+                    "grid gap-3",
+                    meetingMode
+                      ? "sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                      : "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                  )}
+                >
+                  {e.projects.map((g) => {
+                    const total = g.todo + g.inProgress + g.done;
+                    return (
+                      <button
+                        key={g.id ?? NOPROJ}
+                        type="button"
+                        onClick={() => {
+                          setProject(g.id ?? NOPROJ);
+                          setEmployee(e.profile.id);
+                          setGrouping("employee");
+                        }}
+                        className={cn(
+                          "relative rounded-md bg-accent p-4 text-left shadow-sm transition-all",
+                          "hover:-translate-y-0.5 hover:rotate-0 hover:shadow-md",
+                          "[clip-path:polygon(0_0,100%_0,100%_calc(100%-12px),calc(100%-12px)_100%,0_100%)]",
+                          tiltForGroup((e.profile.id[0] ?? "x") + g.name)
+                        )}
+                      >
+                        <span
+                          aria-hidden
+                          className="absolute bottom-0 right-0 size-3 bg-primary/30 [clip-path:polygon(0_0,100%_0,0_100%)]"
+                        />
+                        <div className="flex items-start justify-between gap-2">
+                          <p
+                            className={cn(
+                              "line-clamp-2 font-semibold leading-snug",
+                              meetingMode ? "text-base" : "text-sm"
+                            )}
+                          >
+                            {g.name}
+                          </p>
+                          <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-bold tabular-nums text-primary">
+                            {total}
+                          </span>
+                        </div>
+                        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <span className="size-1.5 rounded-full bg-warning" aria-hidden />
+                            {g.todo}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span className="size-1.5 rounded-full bg-primary" aria-hidden />
+                            {g.inProgress}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span className="size-1.5 rounded-full bg-success" aria-hidden />
+                            {g.done}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            ))
           )}
         </div>
       ) : (
