@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { addDays, format, parseISO } from "date-fns";
-import { CalendarDays, ChevronLeft, ChevronRight, Flag, Search } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Flag, FolderKanban, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/brand/logo";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserAvatar } from "@/components/user-avatar";
 import { cn, formatHours } from "@/lib/utils";
 
@@ -41,12 +42,19 @@ export interface ShareData {
 }
 
 const ALL = "__all__";
+const NOPROJ = "__noproj__";
 type Column = "todo" | "in_progress" | "done";
 const COLUMNS: { key: Column; label: string; dot: string; paper: string; fold: string }[] = [
   { key: "todo", label: "To Do", dot: "bg-warning", paper: "bg-warning/15 dark:bg-warning/12", fold: "bg-warning/40" },
   { key: "in_progress", label: "In Progress", dot: "bg-primary", paper: "bg-primary/12 dark:bg-primary/14", fold: "bg-primary/40" },
   { key: "done", label: "Done", dot: "bg-success", paper: "bg-success/12", fold: "bg-success/40" },
 ];
+
+function tiltForGroup(key: string): string {
+  const n = key.charCodeAt(0) + key.charCodeAt(key.length - 1);
+  const classes = ["-rotate-[0.6deg]", "rotate-[0.4deg]", "rotate-0", "-rotate-[0.3deg]", "rotate-[0.6deg]"];
+  return classes[n % classes.length];
+}
 
 function tilt(id: string): string {
   const n = id.charCodeAt(0) + id.charCodeAt(id.length - 1);
@@ -126,8 +134,10 @@ export function ShareBoard({
 }) {
   const router = useRouter();
   const [employee, setEmployee] = useState<string>(ALL);
+  const [project, setProject] = useState<string>(ALL);
   const [status, setStatus] = useState<string>(ALL);
   const [query, setQuery] = useState("");
+  const [grouping, setGrouping] = useState<"project" | "employee">("employee");
 
   const today = format(new Date(), "yyyy-MM-dd");
   const yesterday = format(addDays(parseISO(`${today}T00:00:00`), -1), "yyyy-MM-dd");
@@ -143,7 +153,13 @@ export function ShareBoard({
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const match = (t: ShareTask) => q === "" || t.title.toLowerCase().includes(q);
+    const match = (t: ShareTask) =>
+      (project === ALL
+        ? true
+        : project === NOPROJ
+          ? !t.project
+          : t.project === project) &&
+      (q === "" || t.title.toLowerCase().includes(q));
     return data.rows
       .filter((r) => employee === ALL || r.id === employee)
       .map((r) => ({
@@ -158,7 +174,56 @@ export function ShareBoard({
           employee !== ALL ||
           r.todo.length + r.in_progress.length + r.done.length > 0
       );
-  }, [data.rows, employee, status, query]);
+  }, [data.rows, employee, project, status, query]);
+
+  const projectNames = useMemo(() => {
+    const names = new Set<string>();
+    for (const r of data.rows) {
+      for (const t of [...r.todo, ...r.in_progress, ...r.done]) {
+        if (t.project) names.add(t.project);
+      }
+    }
+    return [...names].sort();
+  }, [data.rows]);
+
+  const employeeProjects = useMemo(() => {
+    return rows
+      .map((r) => {
+        const groups = new Map<
+          string,
+          { name: string; isNone: boolean; todo: number; in_progress: number; done: number }
+        >();
+        for (const [col, list] of [
+          ["todo", r.todo],
+          ["in_progress", r.in_progress],
+          ["done", r.done],
+        ] as const) {
+          for (const t of list) {
+            const key = t.project ?? NOPROJ;
+            let g = groups.get(key);
+            if (!g) {
+              g = {
+                name: t.project ?? "No project",
+                isNone: !t.project,
+                todo: 0,
+                in_progress: 0,
+                done: 0,
+              };
+              groups.set(key, g);
+            }
+            g[col] += 1;
+          }
+        }
+        return {
+          row: r,
+          projects: [...groups.values()].sort(
+            (a, b) =>
+              b.todo + b.in_progress + b.done - (a.todo + a.in_progress + a.done)
+          ),
+        };
+      })
+      .filter((e) => e.projects.length > 0);
+  }, [rows]);
 
   const totals = {
     tasks: rows.reduce((n, r) => n + r.todo.length + r.in_progress.length + r.done.length, 0),
@@ -284,6 +349,26 @@ export function ShareBoard({
           </SelectContent>
         </Select>
         <Select
+          value={project}
+          onValueChange={(v) => setProject(v ?? ALL)}
+          items={{
+            [ALL]: "All projects",
+            ...Object.fromEntries(projectNames.map((n) => [n, n])),
+          }}
+        >
+          <SelectTrigger className="h-8 w-40 text-sm" aria-label="Filter by project">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All projects</SelectItem>
+            {projectNames.map((n) => (
+              <SelectItem key={n} value={n}>
+                {n}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
           value={status}
           onValueChange={(v) => setStatus(v ?? ALL)}
           items={{
@@ -305,6 +390,36 @@ export function ShareBoard({
         </Select>
       </div>
 
+      {/* view toggle */}
+      <div className="mb-3 flex items-center gap-2">
+        <Tabs
+          value={grouping}
+          onValueChange={(v) => setGrouping(v as "project" | "employee")}
+        >
+          <TabsList>
+            <TabsTrigger value="project" aria-label="Group by project">
+              <FolderKanban className="size-4" aria-hidden /> Projects
+            </TabsTrigger>
+            <TabsTrigger value="employee" aria-label="Board by employee">
+              <Users className="size-4" aria-hidden /> Board
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        {grouping === "employee" && project !== ALL && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setProject(ALL);
+              setEmployee(ALL);
+              setGrouping("project");
+            }}
+          >
+            <ChevronLeft aria-hidden /> All projects
+          </Button>
+        )}
+      </div>
+
       {/* summary */}
       <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-1 rounded-xl border bg-card px-4 py-3 text-base">
         <span><span className="font-semibold tabular-nums">{rows.length}</span> <span className="text-muted-foreground">Employees</span></span>
@@ -324,6 +439,80 @@ export function ShareBoard({
         <p className="rounded-xl border border-dashed px-6 py-16 text-center text-sm text-muted-foreground">
           Nothing on the board for this day.
         </p>
+      ) : grouping === "project" ? (
+        <div className="space-y-5">
+          {employeeProjects.map((e) => (
+            <section
+              key={e.row.id}
+              aria-label={`Projects for ${e.row.name}`}
+              className="rounded-xl border bg-card p-4"
+            >
+              <div className="mb-3 flex items-center gap-2.5">
+                <UserAvatar name={e.row.name} avatarUrl={e.row.avatar_url} className="size-9" />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{e.row.name}</p>
+                  {e.row.job_title && (
+                    <p className="truncate text-xs text-muted-foreground">
+                      {e.row.job_title}
+                    </p>
+                  )}
+                </div>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {e.projects.length} {e.projects.length === 1 ? "project" : "projects"}
+                </span>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {e.projects.map((g) => {
+                  const total = g.todo + g.in_progress + g.done;
+                  return (
+                    <button
+                      key={g.name}
+                      type="button"
+                      onClick={() => {
+                        setProject(g.isNone ? NOPROJ : g.name);
+                        setEmployee(e.row.id);
+                        setGrouping("employee");
+                      }}
+                      className={cn(
+                        "relative rounded-md bg-accent p-4 text-left shadow-sm transition-all",
+                        "hover:-translate-y-0.5 hover:rotate-0 hover:shadow-md",
+                        "[clip-path:polygon(0_0,100%_0,100%_calc(100%-12px),calc(100%-12px)_100%,0_100%)]",
+                        tiltForGroup(e.row.id[0] + g.name)
+                      )}
+                    >
+                      <span
+                        aria-hidden
+                        className="absolute bottom-0 right-0 size-3 bg-primary/30 [clip-path:polygon(0_0,100%_0,0_100%)]"
+                      />
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="line-clamp-2 text-sm font-semibold leading-snug">
+                          {g.name}
+                        </p>
+                        <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-bold tabular-nums text-primary">
+                          {total}
+                        </span>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <span className="size-1.5 rounded-full bg-warning" aria-hidden />
+                          {g.todo}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="size-1.5 rounded-full bg-primary" aria-hidden />
+                          {g.in_progress}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="size-1.5 rounded-full bg-success" aria-hidden />
+                          {g.done}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border bg-card scrollbar-thin">
           <div className="min-w-[900px]">
