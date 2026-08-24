@@ -29,14 +29,8 @@ export function LogoMark({
       />
       <path
         d="M34.8 4H45v10.2L36.6 24.5h-9.4L34.8 4z"
-        fill="url(#uplog-orange)"
+        fill="#EC5800"
       />
-      <defs>
-        <linearGradient id="uplog-orange" x1="27" y1="24" x2="45" y2="4" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#D95204" />
-          <stop offset="1" stopColor="#FF8A3D" />
-        </linearGradient>
-      </defs>
     </svg>
   );
 }
