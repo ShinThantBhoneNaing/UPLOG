@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 /**
- * The UPLOG mark: an ink "U" whose right stem is a coral arrow
+ * The UPLOG mark: an ink "U" whose right stem is a brand-orange arrow
  * pointing up-right. Vector recreation of public/brand/uplog-brandsheet.png.
  */
 export function LogoMark({
@@ -9,7 +9,7 @@ export function LogoMark({
   ink = "var(--color-foreground)",
 }: {
   className?: string;
-  /** Color of the "U" body; the arrow is always brand coral. */
+  /** Color of the "U" body; the arrow is always brand orange. */
   ink?: string;
 }) {
   return (
@@ -29,12 +29,12 @@ export function LogoMark({
       />
       <path
         d="M34.8 4H45v10.2L36.6 24.5h-9.4L34.8 4z"
-        fill="url(#uplog-coral)"
+        fill="url(#uplog-orange)"
       />
       <defs>
-        <linearGradient id="uplog-coral" x1="27" y1="24" x2="45" y2="4" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#F0603F" />
-          <stop offset="1" stopColor="#FB8C5E" />
+        <linearGradient id="uplog-orange" x1="27" y1="24" x2="45" y2="4" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#D95204" />
+          <stop offset="1" stopColor="#FF8A3D" />
         </linearGradient>
       </defs>
     </svg>
@@ -42,7 +42,7 @@ export function LogoMark({
 }
 
 /**
- * Full lockup: mark + "UPLOG" wordmark ("UP" coral, "LOG" ink),
+ * Full lockup: mark + "UPLOG" wordmark ("UP" orange, "LOG" ink),
  * mirroring the brand sheet.
  */
 export function Logo({

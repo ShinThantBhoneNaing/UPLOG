@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Chivo, Hanken_Grotesk, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 import "./globals.css";
 
-const geistSans = Geist({
+const hankenGrotesk = Hanken_Grotesk({
   variable: "--font-sans",
+  subsets: ["latin"],
+});
+
+const chivo = Chivo({
+  variable: "--font-chivo",
   subsets: ["latin"],
 });
 
@@ -29,10 +34,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${hankenGrotesk.variable} ${chivo.variable} ${geistMono.variable}`}
+    >
+      <body className="antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
