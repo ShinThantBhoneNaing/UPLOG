@@ -7,13 +7,19 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
-  useDraggable,
   useDroppable,
   useSensor,
   useSensors,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   CalendarDays,
   FolderKanban,
@@ -45,6 +51,12 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserAvatar } from "@/components/user-avatar";
 import { updateTask } from "@/features/tasks/actions";
 import { notifyMoveAttempt } from "./actions";
+import {
+  positionForDrop,
+  sortTasks,
+  type SortOption,
+} from "@/features/tasks/sorting";
+import { SortSelect } from "@/features/tasks/components/sort-select";
 import { TaskFormDialog } from "@/features/tasks/components/task-form-dialog";
 import { cn, formatHours } from "@/lib/utils";
 import type { TaskStatus, TaskWithRelations } from "@/types/database";
@@ -87,13 +99,18 @@ function DraggableSticky({
   enabled: boolean;
   onOpen: (task: TaskWithRelations) => void;
 }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: task.id,
-    disabled: !enabled,
-  });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id, disabled: !enabled });
   return (
     <div
       ref={setNodeRef}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
       {...listeners}
       {...attributes}
       className={cn("touch-manipulation", isDragging && "opacity-40")}
@@ -109,6 +126,7 @@ function DroppableCell({
   columnLabel,
   employeeName,
   enabled,
+  taskIds,
   onQuickAdd,
   children,
 }: {
@@ -117,6 +135,8 @@ function DroppableCell({
   columnLabel: string;
   employeeName: string;
   enabled: boolean;
+  /** Cards in this cell, in display order — the sortable sequence. */
+  taskIds: string[];
   /** Absent on past days, where the board is a read-only record. */
   onQuickAdd?: (userId: string, column: Column) => void;
   children: React.ReactNode;
@@ -133,7 +153,12 @@ function DroppableCell({
         isOver && "rounded-lg bg-primary/8 ring-1 ring-primary/30"
       )}
     >
-      {children}
+      <SortableContext
+        items={taskIds}
+        strategy={verticalListSortingStrategy}
+      >
+        {children}
+      </SortableContext>
       {onQuickAdd && (
         <button
           type="button"
@@ -181,6 +206,8 @@ export function StandupBoard({
   const [project, setProject] = useState<string>(ALL);
   const [status, setStatus] = useState<string>(ALL);
   const [query, setQuery] = useState("");
+  // Custom = the hand-arranged tasks.position order the wall already used.
+  const [sort, setSort] = useState<SortOption>("custom");
   const [meetingMode, setMeetingMode] = useState(false);
   const [grouping, setGrouping] = useState<"project" | "employee">("employee");
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -262,11 +289,27 @@ export function StandupBoard({
 
   function handleDragEnd(e: DragEndEvent) {
     setActiveTask(null);
-    const overId = e.over?.id;
-    if (typeof overId !== "string") return;
-    const [userId, toColumn] = overId.split("|") as [string, Column];
-    const found = findTask(String(e.active.id));
-    if (!found || found.row.profile.id !== userId || found.column === toColumn) return;
+    if (!e.over) return;
+    const activeId = String(e.active.id);
+    const overId = String(e.over.id);
+    const found = findTask(activeId);
+    if (!found) return;
+
+    // Dropped on a cell, or on a card that tells us which cell it lives in.
+    const onCell = overId.includes("|");
+    const over = onCell ? null : findTask(overId);
+    const userId = onCell ? overId.split("|")[0]! : over?.row.profile.id;
+    const toColumn = onCell
+      ? (overId.split("|")[1] as Column)
+      : over?.column;
+    if (!userId || !toColumn || found.row.profile.id !== userId) return;
+
+    const sameColumn = found.column === toColumn;
+    // Derived sorts have no sequence to rewrite, so in-place drags are inert.
+    if (sameColumn && sort !== "custom") {
+      toast.info("Choose “Custom order” to rearrange cards by hand.");
+      return;
+    }
 
     // Only the assignee may move their own ticket on the meeting board.
     if (found.task.assignee && found.task.assignee.id !== currentUserId) {
@@ -277,28 +320,57 @@ export function StandupBoard({
       return;
     }
 
+    // Work out the cell's final sequence, then take the midpoint position.
+    const source = rows.find((r) => r.profile.id === userId);
+    const columnIds = source ? cardsIn(source, toColumn).map((t) => t.id) : [];
+    let orderedIds: string[];
+    if (sameColumn) {
+      const from = columnIds.indexOf(activeId);
+      const to = onCell ? columnIds.length - 1 : columnIds.indexOf(overId);
+      if (from === -1 || to === -1 || from === to) return;
+      orderedIds = arrayMove(columnIds, from, to);
+    } else {
+      const at = onCell
+        ? columnIds.length
+        : Math.max(0, columnIds.indexOf(overId));
+      orderedIds = [...columnIds.slice(0, at), activeId, ...columnIds.slice(at)];
+    }
+    const position = positionForDrop(
+      orderedIds,
+      activeId,
+      (id) => findTask(id)?.task.position
+    );
+
     const prev = rows;
     // 1. optimistic move
     setRows((rs) =>
-      rs.map((r) =>
-        r.profile.id !== userId
-          ? r
-          : {
-              ...r,
-              [found.column]: r[found.column].filter((t) => t.id !== found.task.id),
-              [toColumn]: [
-                { ...found.task, status: COLUMN_STATUS[toColumn] },
-                ...r[toColumn],
-              ],
-            }
-      )
+      rs.map((r) => {
+        if (r.profile.id !== userId) return r;
+        if (sameColumn) {
+          return {
+            ...r,
+            [toColumn]: r[toColumn].map((t) =>
+              t.id === activeId ? { ...t, position } : t
+            ),
+          };
+        }
+        return {
+          ...r,
+          [found.column]: r[found.column].filter((t) => t.id !== activeId),
+          [toColumn]: [
+            { ...found.task, status: COLUMN_STATUS[toColumn], position },
+            ...r[toColumn],
+          ],
+        };
+      })
     );
     // 2. persist (activity event comes from the DB trigger) — 3. revert on failure
     startTransition(async () => {
-      const result = await updateTask({
-        id: found.task.id,
-        status: COLUMN_STATUS[toColumn],
-      });
+      const result = await updateTask(
+        sameColumn
+          ? { id: activeId, position }
+          : { id: activeId, status: COLUMN_STATUS[toColumn], position }
+      );
       if (!result.ok) {
         setRows(prev);
         toast.error(result.error);
@@ -324,7 +396,9 @@ export function StandupBoard({
         ...r,
         todo: status !== ALL && status !== "todo" ? [] : r.todo.filter(matches),
         inProgress:
-          status !== ALL && status !== "in_progress" ? [] : r.inProgress.filter(matches),
+          status !== ALL && status !== "in_progress"
+            ? []
+            : r.inProgress.filter(matches),
         done: status !== ALL && status !== "done" ? [] : r.done.filter(matches),
       }))
       .map((r) => ({
@@ -340,6 +414,14 @@ export function StandupBoard({
           r.todo.length + r.inProgress.length + r.done.length > 0
       );
   }, [rows, employee, project, status, query]);
+
+  /**
+   * A cell's cards in display order. Sorting stays out of the filter memo:
+   * it is a handful of cards per cell, and rebuilding the row objects here
+   * would alias the memoized rows.
+   */
+  const cardsIn = (row: StandupRow, column: Column) =>
+    sortTasks(row[column].slice(), sort);
 
   const hasAnyTask = rows.some(
     (r) => r.todo.length + r.inProgress.length + r.done.length > 0
@@ -631,6 +713,11 @@ export function StandupBoard({
                 <SelectItem value="done">Done</SelectItem>
               </SelectContent>
             </Select>
+            <SortSelect
+              value={sort}
+              onChange={setSort}
+              className="h-8 w-40 text-sm"
+            />
           </>
         )}
       </div>
@@ -869,36 +956,40 @@ export function StandupBoard({
                       </div>
                     </div>
 
-                    {COLUMNS.map((c) => (
-                      <DroppableCell
-                        key={c.key}
-                        userId={row.profile.id}
-                        column={c.key}
-                        columnLabel={c.label}
-                        employeeName={row.profile.full_name}
-                        enabled={dndEnabled}
-                        onQuickAdd={
-                          data.isToday
-                            ? (assigneeId, col) =>
-                                setQuickAdd({
-                                  assigneeId,
-                                  status: COLUMN_STATUS[col],
-                                })
-                            : undefined
-                        }
-                      >
-                        {row[c.key].map((t) => (
-                          <DraggableSticky
-                            key={t.id}
-                            task={t}
-                            column={c.key}
-                            large={large}
-                            enabled={dndEnabled}
-                            onOpen={setPreviewTask}
-                          />
-                        ))}
-                      </DroppableCell>
-                    ))}
+                    {COLUMNS.map((c) => {
+                      const cards = cardsIn(row, c.key);
+                      return (
+                        <DroppableCell
+                          key={c.key}
+                          userId={row.profile.id}
+                          column={c.key}
+                          columnLabel={c.label}
+                          employeeName={row.profile.full_name}
+                          enabled={dndEnabled}
+                          taskIds={cards.map((t) => t.id)}
+                          onQuickAdd={
+                            data.isToday
+                              ? (assigneeId, col) =>
+                                  setQuickAdd({
+                                    assigneeId,
+                                    status: COLUMN_STATUS[col],
+                                  })
+                              : undefined
+                          }
+                        >
+                          {cards.map((t) => (
+                            <DraggableSticky
+                              key={t.id}
+                              task={t}
+                              column={c.key}
+                              large={large}
+                              enabled={dndEnabled}
+                              onOpen={setPreviewTask}
+                            />
+                          ))}
+                        </DroppableCell>
+                      );
+                    })}
 
                     <div
                       className={cn(

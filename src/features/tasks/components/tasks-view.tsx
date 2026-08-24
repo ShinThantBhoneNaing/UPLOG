@@ -21,7 +21,9 @@ import type {
   TaskWithRelations,
 } from "@/types/database";
 import { updateTask } from "../actions";
+import { sortTasks, type SortOption } from "../sorting";
 import { Board } from "./board";
+import { SortSelect } from "./sort-select";
 import { TaskFormDialog } from "./task-form-dialog";
 import { TaskList } from "./task-list";
 
@@ -57,6 +59,8 @@ export function TasksView({
   const [project, setProject] = useState<string>(ALL);
   const [status, setStatus] = useState<string>(ALL);
   const [query, setQuery] = useState("");
+  // Custom = the hand-arranged tasks.position order the board already used.
+  const [sort, setSort] = useState<SortOption>("custom");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -77,21 +81,18 @@ export function TasksView({
     });
   }, [tasks, assignee, project, status, query, currentUserId]);
 
-  function moveTask(taskId: string, to: TaskStatus) {
+  const sorted = useMemo(() => sortTasks(filtered, sort), [filtered, sort]);
+
+  /** Optimistically patch a task, persist, and roll back if the write fails. */
+  function persist(
+    taskId: string,
+    patch: { status?: TaskStatus; position?: number }
+  ) {
     const prev = tasks;
-    const minPos = Math.min(
-      0,
-      ...tasks.filter((t) => t.status === to).map((t) => t.position)
-    );
-    // 1. Optimistic UI
-    setTasks((ts) =>
-      ts.map((t) =>
-        t.id === taskId ? { ...t, status: to, position: minPos - 1 } : t
-      )
-    );
-    // 2. Persist; 3. activity happens in the DB trigger; 4. revert on failure
+    setTasks((ts) => ts.map((t) => (t.id === taskId ? { ...t, ...patch } : t)));
+    // Activity events come from the DB trigger.
     startTransition(async () => {
-      const result = await updateTask({ id: taskId, status: to, position: minPos - 1 });
+      const result = await updateTask({ id: taskId, ...patch });
       if (!result.ok) {
         setTasks(prev);
         toast.error(result.error);
@@ -99,6 +100,19 @@ export function TasksView({
         router.refresh();
       }
     });
+  }
+
+  function moveTask(taskId: string, to: TaskStatus, position?: number) {
+    // Without an explicit drop position the card goes to the top, as before.
+    const next =
+      position ??
+      Math.min(0, ...tasks.filter((t) => t.status === to).map((t) => t.position)) -
+        1;
+    persist(taskId, { status: to, position: next });
+  }
+
+  function reorderTask(taskId: string, position: number) {
+    persist(taskId, { position });
   }
 
   return (
@@ -200,6 +214,8 @@ export function TasksView({
           </Select>
         )}
 
+        <SortSelect value={sort} onChange={setSort} />
+
         <TaskFormDialog profiles={profiles} projects={projects} currentUserId={currentUserId} />
       </div>
 
@@ -219,9 +235,15 @@ export function TasksView({
           }
         />
       ) : view === "board" ? (
-        <Board tasks={filtered} onMove={moveTask} />
+        <Board
+          tasks={sorted}
+          onMove={moveTask}
+          onReorder={reorderTask}
+          reorderable={sort === "custom"}
+        />
       ) : (
-        <TaskList tasks={filtered} />
+        // Remount on sort change so the table's column sort starts clean.
+        <TaskList key={sort} tasks={sorted} />
       )}
     </div>
   );

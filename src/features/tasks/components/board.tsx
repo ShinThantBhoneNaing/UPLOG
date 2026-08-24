@@ -6,25 +6,39 @@ import {
   DragOverlay,
   PointerSensor,
   KeyboardSensor,
-  useDraggable,
   useDroppable,
   useSensor,
   useSensors,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { toast } from "sonner";
 import { cn, BOARD_STATUSES, STATUS_META } from "@/lib/utils";
 import type { TaskStatus, TaskWithRelations } from "@/types/database";
+import { positionForDrop } from "../sorting";
 import { TaskCard } from "./task-card";
 
-function DraggableCard({ task }: { task: TaskWithRelations }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: task.id,
-  });
+function SortableCard({ task }: { task: TaskWithRelations }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id });
 
   return (
     <div
       ref={setNodeRef}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
       {...listeners}
       {...attributes}
       className={cn("touch-manipulation", isDragging && "opacity-40")}
@@ -59,9 +73,14 @@ function Column({
         <span className="text-xs text-muted-foreground">{tasks.length}</span>
       </header>
       <div className="flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto p-2 scrollbar-thin">
-        {tasks.map((t) => (
-          <DraggableCard key={t.id} task={t} />
-        ))}
+        <SortableContext
+          items={tasks.map((t) => t.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          {tasks.map((t) => (
+            <SortableCard key={t.id} task={t} />
+          ))}
+        </SortableContext>
       </div>
     </section>
   );
@@ -70,10 +89,17 @@ function Column({
 export function Board({
   tasks,
   onMove,
+  onReorder,
+  reorderable = false,
 }: {
+  /** Already in display order — the board never re-sorts. */
   tasks: TaskWithRelations[];
-  /** Called when a card is dropped on another column. */
-  onMove: (taskId: string, to: TaskStatus) => void;
+  /** Dropped on another column. `position` is only set in custom order. */
+  onMove: (taskId: string, to: TaskStatus, position?: number) => void;
+  /** Dropped at a new place in the same column (custom order only). */
+  onReorder?: (taskId: string, position: number) => void;
+  /** Custom order: cards can be resequenced, not just moved across. */
+  reorderable?: boolean;
 }) {
   const [activeTask, setActiveTask] = useState<TaskWithRelations | null>(null);
 
@@ -89,10 +115,51 @@ export function Board({
 
   function handleDragEnd(e: DragEndEvent) {
     setActiveTask(null);
-    const to = e.over?.id as TaskStatus | undefined;
-    if (!to || !BOARD_STATUSES.includes(to)) return;
-    const task = tasks.find((t) => t.id === e.active.id);
-    if (task && task.status !== to) onMove(task.id, to);
+    if (!e.over) return;
+
+    const activeId = String(e.active.id);
+    const overId = String(e.over.id);
+    const task = tasks.find((t) => t.id === activeId);
+    if (!task) return;
+
+    // Dropped on a column, or on a card that tells us its column.
+    const isColumn = BOARD_STATUSES.includes(overId as TaskStatus);
+    const to = isColumn
+      ? (overId as TaskStatus)
+      : tasks.find((t) => t.id === overId)?.status;
+    if (!to) return;
+
+    const sameColumn = task.status === to;
+    if (sameColumn && !reorderable) {
+      toast.info("Choose “Custom order” to rearrange cards by hand.");
+      return;
+    }
+
+    const columnIds = tasks.filter((t) => t.status === to).map((t) => t.id);
+    let orderedIds: string[];
+
+    if (sameColumn) {
+      const from = columnIds.indexOf(activeId);
+      const target = isColumn ? columnIds.length - 1 : columnIds.indexOf(overId);
+      if (from === -1 || target === -1 || from === target) return;
+      orderedIds = arrayMove(columnIds, from, target);
+    } else {
+      const at = isColumn
+        ? columnIds.length
+        : Math.max(0, columnIds.indexOf(overId));
+      orderedIds = [...columnIds.slice(0, at), activeId, ...columnIds.slice(at)];
+    }
+
+    const position = positionForDrop(
+      orderedIds,
+      activeId,
+      (id) => tasks.find((t) => t.id === id)?.position
+    );
+
+    if (sameColumn) onReorder?.(activeId, position);
+    // Derived sorts have no sequence to honour, so let the move keep its
+    // default placement instead of writing an order the user can't see.
+    else onMove(activeId, to, reorderable ? position : undefined);
   }
 
   return (
@@ -106,9 +173,7 @@ export function Board({
           <Column
             key={status}
             status={status}
-            tasks={tasks
-              .filter((t) => t.status === status)
-              .sort((a, b) => a.position - b.position)}
+            tasks={tasks.filter((t) => t.status === status)}
           />
         ))}
       </div>

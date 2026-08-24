@@ -28,7 +28,7 @@ function SortHeader({
 }: {
   label: string;
   k: SortKey;
-  sortKey: SortKey;
+  sortKey: SortKey | null;
   onSort: (k: SortKey) => void;
 }) {
   return (
@@ -48,11 +48,14 @@ function SortHeader({
 }
 
 export function TaskList({ tasks }: { tasks: TaskWithRelations[] }) {
-  const [sortKey, setSortKey] = useState<SortKey>("updated_at");
+  // null = keep the order chosen by the toolbar's Sort control; a column
+  // header overrides it for this table only.
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [asc, setAsc] = useState(false);
   const [page, setPage] = useState(0);
 
   const sorted = useMemo(() => {
+    if (!sortKey) return tasks;
     const dir = asc ? 1 : -1;
     return [...tasks].sort((a, b) => {
       switch (sortKey) {
