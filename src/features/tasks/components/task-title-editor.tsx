@@ -6,32 +6,9 @@ import { Check, Copy, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { updateTask } from "../actions";
-
-/** Renders plain text with URLs as clickable links. */
-function LinkifiedText({ text }: { text: string }) {
-  const parts = text.split(/(https?:\/\/[^\s<>"')]+)/g);
-  return (
-    <>
-      {parts.map((part, i) =>
-        /^https?:\/\//.test(part) ? (
-          <a
-            key={i}
-            href={part}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="break-all font-medium text-primary underline underline-offset-2 hover:opacity-80"
-          >
-            {part}
-          </a>
-        ) : (
-          <span key={i}>{part}</span>
-        )
-      )}
-    </>
-  );
-}
+import { recordAttachment, updateTask } from "../actions";
+import { DescriptionEditor } from "./description-editor";
+import { RichText } from "./rich-text";
 
 /** Inline title + description editing for users who can edit the task. */
 export function TaskTitleEditor({
@@ -39,11 +16,13 @@ export function TaskTitleEditor({
   title,
   description,
   canEdit,
+  currentUserId,
 }: {
   taskId: string;
   title: string;
   description: string | null;
   canEdit: boolean;
+  currentUserId: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -89,12 +68,19 @@ export function TaskTitleEditor({
           aria-label="Task title"
           className="text-lg font-semibold"
         />
-        <Textarea
+        <DescriptionEditor
           value={draftDescription}
-          onChange={(e) => setDraftDescription(e.target.value)}
+          onChange={setDraftDescription}
+          currentUserId={currentUserId}
+          taskId={taskId}
+          // The task already exists, so a pasted image can be attached at once.
+          onUploaded={(image) => {
+            void recordAttachment({ taskId, ...image }).then((result) => {
+              if (!result.ok) toast.error(result.error);
+            });
+          }}
           rows={5}
-          maxLength={10000}
-          placeholder="Describe the task…"
+          placeholder="Describe the task… (paste or drop screenshots right in)"
           aria-label="Task description"
         />
         <div className="flex gap-2">
@@ -150,9 +136,7 @@ export function TaskTitleEditor({
         )}
       </div>
       {description ? (
-        <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
-          <LinkifiedText text={description} />
-        </p>
+        <RichText text={description} className="mt-3" />
       ) : (
         canEdit && (
           <button

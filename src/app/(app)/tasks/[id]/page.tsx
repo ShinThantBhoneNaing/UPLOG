@@ -122,6 +122,7 @@ export default async function TaskDetailPage({
             title={task.title}
             description={task.description}
             canEdit={canEdit}
+            currentUserId={profile.id}
           />
 
           <Separator className="my-6" />

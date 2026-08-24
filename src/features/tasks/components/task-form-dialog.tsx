@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { DescriptionEditor, type UploadedImage } from "./description-editor";
 import {
   TASK_PRIORITIES,
   PRIORITY_META,
@@ -72,6 +72,13 @@ export function TaskFormDialog({
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = openProp ?? uncontrolledOpen;
   function setOpen(next: boolean) {
+    // Abandoning the form leaves pasted screenshots with nothing to belong
+    // to — drop them rather than orphan them in the bucket.
+    if (!next && inlineImages.current.length > 0) {
+      const paths = inlineImages.current.map((i) => i.storagePath);
+      inlineImages.current = [];
+      void createClient().storage.from("attachments").remove(paths);
+    }
     if (openProp === undefined) setUncontrolledOpen(next);
     onOpenChange?.(next);
   }
@@ -87,6 +94,10 @@ export function TaskFormDialog({
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [dueDate, setDueDate] = useState("");
   const [images, setImages] = useState<PendingImage[]>([]);
+  // Screenshots pasted into the description; already in storage, waiting for
+  // a task id to be recorded against. A ref, so that clearing the list and
+  // closing the dialog in the same tick can't race.
+  const inlineImages = useRef<UploadedImage[]>([]);
 
   // Free object URLs when the component unmounts.
   useEffect(() => {
@@ -175,6 +186,24 @@ export function TaskFormDialog({
         }
       }
 
+      // Pasted screenshots are already uploaded — attach them to the task so
+      // they appear in its attachment list alongside the inline copy.
+      if (inlineImages.current.length && result.data) {
+        const pasted = inlineImages.current;
+        inlineImages.current = [];
+        let unrecorded = 0;
+        for (const image of pasted) {
+          const rec = await recordAttachment({ taskId: result.data.id, ...image });
+          if (!rec.ok) unrecorded++;
+        }
+        if (unrecorded > 0) {
+          // The description still renders them; only the attachment list misses out.
+          toast.warning(
+            `${unrecorded} pasted image(s) couldn't be added to the attachment list.`
+          );
+        }
+      }
+
       toast.success("Task created");
       setOpen(false);
       resetForm();
@@ -225,13 +254,14 @@ export function TaskFormDialog({
 
           <div className="space-y-2">
             <Label htmlFor="task-description">Description</Label>
-            <Textarea
+            <DescriptionEditor
               id="task-description"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add context, links, acceptance criteria… (links become clickable)"
+              onChange={setDescription}
+              currentUserId={currentUserId ?? ""}
+              onUploaded={(image) => inlineImages.current.push(image)}
+              placeholder="Add context, links, acceptance criteria… (paste or drop screenshots right in)"
               rows={3}
-              maxLength={10000}
             />
           </div>
 

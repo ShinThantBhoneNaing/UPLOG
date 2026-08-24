@@ -16,6 +16,7 @@ import {
   PriorityBadge,
   StatusBadge,
 } from "@/features/tasks/components/badges";
+import { RichText } from "@/features/tasks/components/rich-text";
 import { formatHours } from "@/lib/utils";
 import type { TaskWithRelations } from "@/types/database";
 
@@ -88,9 +89,10 @@ export function TaskPreviewDialog({
             </dl>
 
             {task.description && (
-              <p className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-lg bg-muted/40 p-3 text-sm leading-relaxed scrollbar-thin">
-                {task.description}
-              </p>
+              <RichText
+                text={task.description}
+                className="max-h-40 overflow-y-auto rounded-lg bg-muted/40 p-3 scrollbar-thin"
+              />
             )}
 
             <div className="flex justify-end gap-2 pt-1">
