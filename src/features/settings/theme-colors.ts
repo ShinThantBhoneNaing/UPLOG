@@ -1,16 +1,32 @@
 /**
- * User-customizable theme colors (primary, secondary, sticky-note paper).
+ * User-customizable theme colors (primary, secondary, sticky-note paper,
+ * background) with optional per-color opacity and frosted blur.
  * Stored in localStorage and applied as inline CSS-variable overrides on
- * <html>, so they win over both the :root and .dark stylesheet values.
+ * <html> (plus a data-blur attribute), so they win over both the :root and
+ * .dark stylesheet values.
  */
 
-export type CustomColorKey = "primary" | "secondary" | "sticky";
-export type CustomColors = Partial<Record<CustomColorKey, string>>;
+export type CustomColorKey = "primary" | "secondary" | "sticky" | "background";
+
+export type ColorSetting = {
+  hex: string; // #rrggbb
+  alpha: number; // 0–100
+  blur: boolean; // frosted backdrop blur
+};
+
+export type CustomColors = Partial<Record<CustomColorKey, ColorSetting>>;
 
 export const COLORS_STORAGE_KEY = "uplog-colors";
 
 const DARK_TEXT = "#241f1a";
 const LIGHT_TEXT = "#faf6f0";
+
+const ALL_KEYS: CustomColorKey[] = [
+  "primary",
+  "secondary",
+  "sticky",
+  "background",
+];
 
 /** Near-black or near-white, whichever reads on the given background. */
 export function readableForeground(hex: string): string {
@@ -21,41 +37,117 @@ export function readableForeground(hex: string): string {
   return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? DARK_TEXT : LIGHT_TEXT;
 }
 
+/** #rrggbb + alpha% → #rrggbb or #rrggbbaa. */
+function withAlpha(hex: string, alpha: number): string {
+  if (alpha >= 100) return hex;
+  return hex + Math.round(alpha * 2.55).toString(16).padStart(2, "0");
+}
+
+/** Mix a hex color toward white by t (0–1) — used to derive card from bg. */
+function lighten(hex: string, t: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = (x: number) =>
+    Math.round(x + (255 - x) * t)
+      .toString(16)
+      .padStart(2, "0");
+  return "#" + ch((n >> 16) & 255) + ch((n >> 8) & 255) + ch(n & 255);
+}
+
+const VAR_NAMES: Record<CustomColorKey, string[]> = {
+  primary: [
+    "--primary",
+    "--ring",
+    "--sidebar-primary",
+    "--sidebar-ring",
+    "--primary-foreground",
+    "--sidebar-primary-foreground",
+  ],
+  secondary: ["--secondary", "--secondary-foreground"],
+  sticky: ["--sticky"],
+  background: [
+    "--background",
+    "--foreground",
+    "--card",
+    "--popover",
+    "--card-foreground",
+    "--popover-foreground",
+    "--border",
+    "--input",
+  ],
+};
+
 /** CSS variables driven by each customizable color. */
-function varsFor(key: CustomColorKey, hex: string): Array<[string, string]> {
+function varsFor(key: CustomColorKey, c: ColorSetting): Array<[string, string]> {
   switch (key) {
     case "primary": {
-      const fg = readableForeground(hex);
+      const fg = readableForeground(c.hex);
+      const hex = withAlpha(c.hex, c.alpha);
       return [
         ["--primary", hex],
-        ["--ring", hex],
+        ["--ring", c.hex],
         ["--sidebar-primary", hex],
-        ["--sidebar-ring", hex],
+        ["--sidebar-ring", c.hex],
         ["--primary-foreground", fg],
         ["--sidebar-primary-foreground", fg],
       ];
     }
     case "secondary":
       return [
-        ["--secondary", hex],
-        ["--secondary-foreground", readableForeground(hex)],
+        ["--secondary", withAlpha(c.hex, c.alpha)],
+        ["--secondary-foreground", readableForeground(c.hex)],
       ];
     case "sticky":
-      return [["--sticky", hex]];
+      return [["--sticky", withAlpha(c.hex, c.alpha)]];
+    case "background": {
+      const fg = readableForeground(c.hex);
+      const isDarkBg = fg === LIGHT_TEXT;
+      // Cards sit slightly lighter than the page, like the stock theme;
+      // opacity applies to the panels so the page shows through them.
+      const card = withAlpha(lighten(c.hex, isDarkBg ? 0.07 : 0.45), c.alpha);
+      return [
+        ["--background", c.hex],
+        ["--foreground", fg],
+        ["--card", card],
+        ["--popover", card],
+        ["--card-foreground", fg],
+        ["--popover-foreground", fg],
+        ["--border", fg + (isDarkBg ? "24" : "59")],
+        ["--input", fg + (isDarkBg ? "2e" : "73")],
+      ];
+    }
   }
 }
 
-const ALL_KEYS: CustomColorKey[] = ["primary", "secondary", "sticky"];
-
 export function applyCustomColors(colors: CustomColors) {
-  const style = document.documentElement.style;
+  const root = document.documentElement;
+  const blurred: string[] = [];
   for (const key of ALL_KEYS) {
-    const hex = colors[key];
-    for (const [name, value] of varsFor(key, hex ?? "#000000")) {
-      if (hex) style.setProperty(name, value);
-      else style.removeProperty(name);
+    const setting = colors[key];
+    if (setting) {
+      for (const [name, value] of varsFor(key, setting)) {
+        root.style.setProperty(name, value);
+      }
+      if (setting.blur) blurred.push(key);
+    } else {
+      for (const name of VAR_NAMES[key]) root.style.removeProperty(name);
     }
   }
+  if (blurred.length > 0) root.setAttribute("data-blur", blurred.join(" "));
+  else root.removeAttribute("data-blur");
+}
+
+function normalizeSetting(v: unknown): ColorSetting | null {
+  // v1 stored a bare hex string; v2 stores {hex, alpha, blur}.
+  const raw = typeof v === "string" ? { hex: v } : v;
+  if (typeof raw !== "object" || raw === null) return null;
+  const { hex, alpha, blur } = raw as Record<string, unknown>;
+  if (typeof hex !== "string" || !/^#[0-9a-f]{6}$/i.test(hex)) return null;
+  return {
+    hex: hex.toLowerCase(),
+    alpha:
+      typeof alpha === "number" ? Math.min(100, Math.max(0, alpha)) : 100,
+    blur: blur === true,
+  };
 }
 
 export function loadCustomColors(): CustomColors {
@@ -66,8 +158,10 @@ export function loadCustomColors(): CustomColors {
     if (typeof parsed !== "object" || parsed === null) return {};
     const out: CustomColors = {};
     for (const key of ALL_KEYS) {
-      const v = (parsed as Record<string, unknown>)[key];
-      if (typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v)) out[key] = v;
+      const setting = normalizeSetting(
+        (parsed as Record<string, unknown>)[key]
+      );
+      if (setting) out[key] = setting;
     }
     return out;
   } catch {
@@ -85,11 +179,11 @@ export function saveCustomColors(colors: CustomColors) {
 
 /**
  * Inline no-flash script for the root layout: re-applies saved colors before
- * first paint. Keep in sync with varsFor()/readableForeground() above.
+ * first paint. Keep in sync with varsFor()/normalizeSetting() above.
  */
 export const THEME_COLORS_SCRIPT = `(function(){try{var c=JSON.parse(localStorage.getItem(${JSON.stringify(
   COLORS_STORAGE_KEY
-)})||"{}");var s=document.documentElement.style;function fg(h){var n=parseInt(h.slice(1),16);return .299*(n>>16&255)+.587*(n>>8&255)+.114*(n&255)>150?"${DARK_TEXT}":"${LIGHT_TEXT}"}function ok(h){return typeof h==="string"&&/^#[0-9a-fA-F]{6}$/.test(h)}if(ok(c.primary)){var f=fg(c.primary);s.setProperty("--primary",c.primary);s.setProperty("--ring",c.primary);s.setProperty("--sidebar-primary",c.primary);s.setProperty("--sidebar-ring",c.primary);s.setProperty("--primary-foreground",f);s.setProperty("--sidebar-primary-foreground",f)}if(ok(c.secondary)){s.setProperty("--secondary",c.secondary);s.setProperty("--secondary-foreground",fg(c.secondary))}if(ok(c.sticky)){s.setProperty("--sticky",c.sticky)}}catch(e){}})();`;
+)})||"{}");var s=document.documentElement.style,bl=[];function norm(v){if(typeof v==="string")v={hex:v};if(!v||typeof v!=="object"||typeof v.hex!=="string"||!/^#[0-9a-fA-F]{6}$/.test(v.hex))return null;return{hex:v.hex.toLowerCase(),alpha:typeof v.alpha==="number"?Math.min(100,Math.max(0,v.alpha)):100,blur:v.blur===true}}function fg(h){var n=parseInt(h.slice(1),16);return .299*(n>>16&255)+.587*(n>>8&255)+.114*(n&255)>150?"${DARK_TEXT}":"${LIGHT_TEXT}"}function a8(h,a){if(a>=100)return h;var v=Math.round(a*2.55).toString(16);return h+(v.length<2?"0"+v:v)}function li(h,t){var n=parseInt(h.slice(1),16);function m(x){var v=Math.round(x+(255-x)*t).toString(16);return v.length<2?"0"+v:v}return"#"+m(n>>16&255)+m(n>>8&255)+m(n&255)}var p=norm(c.primary);if(p){var f=fg(p.hex),h=a8(p.hex,p.alpha);s.setProperty("--primary",h);s.setProperty("--ring",p.hex);s.setProperty("--sidebar-primary",h);s.setProperty("--sidebar-ring",p.hex);s.setProperty("--primary-foreground",f);s.setProperty("--sidebar-primary-foreground",f);if(p.blur)bl.push("primary")}var q=norm(c.secondary);if(q){s.setProperty("--secondary",a8(q.hex,q.alpha));s.setProperty("--secondary-foreground",fg(q.hex));if(q.blur)bl.push("secondary")}var k=norm(c.sticky);if(k){s.setProperty("--sticky",a8(k.hex,k.alpha));if(k.blur)bl.push("sticky")}var b=norm(c.background);if(b){var bf=fg(b.hex),dk=bf==="${LIGHT_TEXT}",cd=a8(li(b.hex,dk?0.07:0.45),b.alpha);s.setProperty("--background",b.hex);s.setProperty("--foreground",bf);s.setProperty("--card",cd);s.setProperty("--popover",cd);s.setProperty("--card-foreground",bf);s.setProperty("--popover-foreground",bf);s.setProperty("--border",bf+(dk?"24":"59"));s.setProperty("--input",bf+(dk?"2e":"73"));if(b.blur)bl.push("background")}if(bl.length)document.documentElement.setAttribute("data-blur",bl.join(" "))}catch(e){}})();`;
 
 /* ---------------------------------------------------------------- *
  * Color math shared with the color-wheel picker.

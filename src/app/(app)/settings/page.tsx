@@ -6,6 +6,7 @@ import {
   ProfileForm,
 } from "@/features/settings/settings-forms";
 import { ColorsForm } from "@/features/settings/colors-form";
+import { IconsForm } from "@/features/settings/icons-form";
 import { getCurrentProfile } from "@/features/shell/get-current-profile";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -33,6 +34,7 @@ export default async function SettingsPage() {
           <div className="space-y-4">
             <AppearanceForm />
             <ColorsForm />
+            <IconsForm />
           </div>
         </section>
         <section aria-label="Security">
