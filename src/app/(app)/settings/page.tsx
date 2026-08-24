@@ -5,6 +5,7 @@ import {
   PasswordForm,
   ProfileForm,
 } from "@/features/settings/settings-forms";
+import { ColorsForm } from "@/features/settings/colors-form";
 import { getCurrentProfile } from "@/features/shell/get-current-profile";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -25,11 +26,14 @@ export default async function SettingsPage() {
           </h2>
           <ProfileForm profile={profile} />
         </section>
-        <section aria-label="Appearance">
+        <section aria-label="Appearance" id="appearance">
           <h2 className="mb-3 text-sm font-semibold text-muted-foreground">
             Appearance
           </h2>
-          <AppearanceForm />
+          <div className="space-y-4">
+            <AppearanceForm />
+            <ColorsForm />
+          </div>
         </section>
         <section aria-label="Security">
           <h2 className="mb-3 text-sm font-semibold text-muted-foreground">
