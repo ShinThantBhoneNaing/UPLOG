@@ -49,6 +49,12 @@ const TARGETS: Array<{
     description: "Page background and panels",
     varName: "--background",
   },
+  {
+    key: "sidebar",
+    label: "Sidebar",
+    description: "Navigation panel",
+    varName: "--sidebar",
+  },
 ];
 
 const PRESETS = [

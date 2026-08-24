@@ -6,7 +6,12 @@
  * .dark stylesheet values.
  */
 
-export type CustomColorKey = "primary" | "secondary" | "sticky" | "background";
+export type CustomColorKey =
+  | "primary"
+  | "secondary"
+  | "sticky"
+  | "background"
+  | "sidebar";
 
 export type ColorSetting = {
   hex: string; // #rrggbb
@@ -26,6 +31,7 @@ const ALL_KEYS: CustomColorKey[] = [
   "secondary",
   "sticky",
   "background",
+  "sidebar",
 ];
 
 /** Near-black or near-white, whichever reads on the given background. */
@@ -43,11 +49,14 @@ function withAlpha(hex: string, alpha: number): string {
   return hex + Math.round(alpha * 2.55).toString(16).padStart(2, "0");
 }
 
-/** Mix a hex color toward white by t (0–1) — used to derive card from bg. */
-function lighten(hex: string, t: number): string {
+/**
+ * Mix a hex color toward white (t > 0) or black (t < 0) — used to derive
+ * card from background and hover/active fills from the sidebar color.
+ */
+function shade(hex: string, t: number): string {
   const n = parseInt(hex.slice(1), 16);
   const ch = (x: number) =>
-    Math.round(x + (255 - x) * t)
+    Math.round(t >= 0 ? x + (255 - x) * t : x * (1 + t))
       .toString(16)
       .padStart(2, "0");
   return "#" + ch((n >> 16) & 255) + ch((n >> 8) & 255) + ch(n & 255);
@@ -73,6 +82,13 @@ const VAR_NAMES: Record<CustomColorKey, string[]> = {
     "--popover-foreground",
     "--border",
     "--input",
+  ],
+  sidebar: [
+    "--sidebar",
+    "--sidebar-foreground",
+    "--sidebar-accent",
+    "--sidebar-accent-foreground",
+    "--sidebar-border",
   ],
 };
 
@@ -103,7 +119,7 @@ function varsFor(key: CustomColorKey, c: ColorSetting): Array<[string, string]> 
       const isDarkBg = fg === LIGHT_TEXT;
       // Cards sit slightly lighter than the page, like the stock theme;
       // opacity applies to the panels so the page shows through them.
-      const card = withAlpha(lighten(c.hex, isDarkBg ? 0.07 : 0.45), c.alpha);
+      const card = withAlpha(shade(c.hex, isDarkBg ? 0.07 : 0.45), c.alpha);
       return [
         ["--background", c.hex],
         ["--foreground", fg],
@@ -113,6 +129,18 @@ function varsFor(key: CustomColorKey, c: ColorSetting): Array<[string, string]> 
         ["--popover-foreground", fg],
         ["--border", fg + (isDarkBg ? "24" : "59")],
         ["--input", fg + (isDarkBg ? "2e" : "73")],
+      ];
+    }
+    case "sidebar": {
+      const fg = readableForeground(c.hex);
+      const isDark = fg === LIGHT_TEXT;
+      return [
+        ["--sidebar", withAlpha(c.hex, c.alpha)],
+        ["--sidebar-foreground", fg],
+        // Hover/active nav fill: a step lighter on dark, darker on light.
+        ["--sidebar-accent", shade(c.hex, isDark ? 0.09 : -0.07)],
+        ["--sidebar-accent-foreground", fg],
+        ["--sidebar-border", fg + (isDark ? "1f" : "3d")],
       ];
     }
   }
@@ -183,7 +211,7 @@ export function saveCustomColors(colors: CustomColors) {
  */
 export const THEME_COLORS_SCRIPT = `(function(){try{var c=JSON.parse(localStorage.getItem(${JSON.stringify(
   COLORS_STORAGE_KEY
-)})||"{}");var s=document.documentElement.style,bl=[];function norm(v){if(typeof v==="string")v={hex:v};if(!v||typeof v!=="object"||typeof v.hex!=="string"||!/^#[0-9a-fA-F]{6}$/.test(v.hex))return null;return{hex:v.hex.toLowerCase(),alpha:typeof v.alpha==="number"?Math.min(100,Math.max(0,v.alpha)):100,blur:v.blur===true}}function fg(h){var n=parseInt(h.slice(1),16);return .299*(n>>16&255)+.587*(n>>8&255)+.114*(n&255)>150?"${DARK_TEXT}":"${LIGHT_TEXT}"}function a8(h,a){if(a>=100)return h;var v=Math.round(a*2.55).toString(16);return h+(v.length<2?"0"+v:v)}function li(h,t){var n=parseInt(h.slice(1),16);function m(x){var v=Math.round(x+(255-x)*t).toString(16);return v.length<2?"0"+v:v}return"#"+m(n>>16&255)+m(n>>8&255)+m(n&255)}var p=norm(c.primary);if(p){var f=fg(p.hex),h=a8(p.hex,p.alpha);s.setProperty("--primary",h);s.setProperty("--ring",p.hex);s.setProperty("--sidebar-primary",h);s.setProperty("--sidebar-ring",p.hex);s.setProperty("--primary-foreground",f);s.setProperty("--sidebar-primary-foreground",f);if(p.blur)bl.push("primary")}var q=norm(c.secondary);if(q){s.setProperty("--secondary",a8(q.hex,q.alpha));s.setProperty("--secondary-foreground",fg(q.hex));if(q.blur)bl.push("secondary")}var k=norm(c.sticky);if(k){s.setProperty("--sticky",a8(k.hex,k.alpha));if(k.blur)bl.push("sticky")}var b=norm(c.background);if(b){var bf=fg(b.hex),dk=bf==="${LIGHT_TEXT}",cd=a8(li(b.hex,dk?0.07:0.45),b.alpha);s.setProperty("--background",b.hex);s.setProperty("--foreground",bf);s.setProperty("--card",cd);s.setProperty("--popover",cd);s.setProperty("--card-foreground",bf);s.setProperty("--popover-foreground",bf);s.setProperty("--border",bf+(dk?"24":"59"));s.setProperty("--input",bf+(dk?"2e":"73"));if(b.blur)bl.push("background")}if(bl.length)document.documentElement.setAttribute("data-blur",bl.join(" "))}catch(e){}})();`;
+)})||"{}");var s=document.documentElement.style,bl=[];function norm(v){if(typeof v==="string")v={hex:v};if(!v||typeof v!=="object"||typeof v.hex!=="string"||!/^#[0-9a-fA-F]{6}$/.test(v.hex))return null;return{hex:v.hex.toLowerCase(),alpha:typeof v.alpha==="number"?Math.min(100,Math.max(0,v.alpha)):100,blur:v.blur===true}}function fg(h){var n=parseInt(h.slice(1),16);return .299*(n>>16&255)+.587*(n>>8&255)+.114*(n&255)>150?"${DARK_TEXT}":"${LIGHT_TEXT}"}function a8(h,a){if(a>=100)return h;var v=Math.round(a*2.55).toString(16);return h+(v.length<2?"0"+v:v)}function sh(h,t){var n=parseInt(h.slice(1),16);function m(x){var v=Math.round(t>=0?x+(255-x)*t:x*(1+t)).toString(16);return v.length<2?"0"+v:v}return"#"+m(n>>16&255)+m(n>>8&255)+m(n&255)}var p=norm(c.primary);if(p){var f=fg(p.hex),h=a8(p.hex,p.alpha);s.setProperty("--primary",h);s.setProperty("--ring",p.hex);s.setProperty("--sidebar-primary",h);s.setProperty("--sidebar-ring",p.hex);s.setProperty("--primary-foreground",f);s.setProperty("--sidebar-primary-foreground",f);if(p.blur)bl.push("primary")}var q=norm(c.secondary);if(q){s.setProperty("--secondary",a8(q.hex,q.alpha));s.setProperty("--secondary-foreground",fg(q.hex));if(q.blur)bl.push("secondary")}var k=norm(c.sticky);if(k){s.setProperty("--sticky",a8(k.hex,k.alpha));if(k.blur)bl.push("sticky")}var b=norm(c.background);if(b){var bf=fg(b.hex),dk=bf==="${LIGHT_TEXT}",cd=a8(sh(b.hex,dk?0.07:0.45),b.alpha);s.setProperty("--background",b.hex);s.setProperty("--foreground",bf);s.setProperty("--card",cd);s.setProperty("--popover",cd);s.setProperty("--card-foreground",bf);s.setProperty("--popover-foreground",bf);s.setProperty("--border",bf+(dk?"24":"59"));s.setProperty("--input",bf+(dk?"2e":"73"));if(b.blur)bl.push("background")}var sb=norm(c.sidebar);if(sb){var sf=fg(sb.hex),sd=sf==="${LIGHT_TEXT}";s.setProperty("--sidebar",a8(sb.hex,sb.alpha));s.setProperty("--sidebar-foreground",sf);s.setProperty("--sidebar-accent",sh(sb.hex,sd?0.09:-0.07));s.setProperty("--sidebar-accent-foreground",sf);s.setProperty("--sidebar-border",sf+(sd?"1f":"3d"));if(sb.blur)bl.push("sidebar")}if(bl.length)document.documentElement.setAttribute("data-blur",bl.join(" "))}catch(e){}})();`;
 
 /* ---------------------------------------------------------------- *
  * Color math shared with the color-wheel picker.

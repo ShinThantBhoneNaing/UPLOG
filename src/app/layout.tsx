@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Chivo, Hanken_Grotesk, Geist_Mono } from "next/font/google";
+import { Chivo, Hanken_Grotesk, Geist_Mono, Kalam } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 import { THEME_COLORS_SCRIPT } from "@/features/settings/theme-colors";
@@ -21,6 +21,13 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Handwriting face for the stand-up board sticky notes.
+const kalam = Kalam({
+  variable: "--font-kalam",
+  weight: ["400", "700"],
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   title: {
     default: "UPLOG — Plan. Share. Get things done.",
@@ -39,7 +46,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${hankenGrotesk.variable} ${chivo.variable} ${geistMono.variable}`}
+      className={`${hankenGrotesk.variable} ${chivo.variable} ${geistMono.variable} ${kalam.variable}`}
     >
       <body className="antialiased">
         {/* Re-applies the user's saved custom colors and icon style before
