@@ -83,13 +83,20 @@ export function TasksView({
 
   const sorted = useMemo(() => sortTasks(filtered, sort), [filtered, sort]);
 
-  /** Optimistically patch a task, persist, and roll back if the write fails. */
+  /**
+   * Optimistically patch a task, persist, and roll back if the write fails.
+   * `local` holds fields the server derives for itself (completed_at) — they
+   * keep the board honest until the refresh lands, but are never sent.
+   */
   function persist(
     taskId: string,
-    patch: { status?: TaskStatus; position?: number }
+    patch: { status?: TaskStatus; position?: number },
+    local?: { completed_at?: string | null }
   ) {
     const prev = tasks;
-    setTasks((ts) => ts.map((t) => (t.id === taskId ? { ...t, ...patch } : t)));
+    setTasks((ts) =>
+      ts.map((t) => (t.id === taskId ? { ...t, ...patch, ...local } : t))
+    );
     // Activity events come from the DB trigger.
     startTransition(async () => {
       const result = await updateTask({ id: taskId, ...patch });
@@ -108,7 +115,13 @@ export function TasksView({
       position ??
       Math.min(0, ...tasks.filter((t) => t.status === to).map((t) => t.position)) -
         1;
-    persist(taskId, { status: to, position: next });
+    // Mirror the DB trigger's completed_at, or a card dropped on Done would
+    // fall straight out of the "finished today" filter and disappear.
+    persist(
+      taskId,
+      { status: to, position: next },
+      { completed_at: to === "done" ? new Date().toISOString() : null }
+    );
   }
 
   function reorderTask(taskId: string, position: number) {

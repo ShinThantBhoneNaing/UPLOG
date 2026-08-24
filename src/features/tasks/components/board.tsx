@@ -71,6 +71,9 @@ function Column({
         <span className={cn("size-2 rounded-full", meta.dot)} aria-hidden />
         <h3 className="text-sm font-semibold">{meta.label}</h3>
         <span className="text-xs text-muted-foreground">{tasks.length}</span>
+        {status === "done" && (
+          <span className="ml-auto text-xs text-muted-foreground">today</span>
+        )}
       </header>
       <div className="flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto p-2 scrollbar-thin">
         <SortableContext
@@ -86,8 +89,20 @@ function Column({
   );
 }
 
+/**
+ * The Done column shows what was finished today, not every task ever
+ * completed — otherwise it grows without bound and buries the day's work.
+ * Older completions stay on the History page and in the list view.
+ */
+function completedToday(task: TaskWithRelations): boolean {
+  if (!task.completed_at) return false;
+  const midnight = new Date();
+  midnight.setHours(0, 0, 0, 0);
+  return new Date(task.completed_at).getTime() >= midnight.getTime();
+}
+
 export function Board({
-  tasks,
+  tasks: allTasks,
   onMove,
   onReorder,
   reorderable = false,
@@ -102,6 +117,12 @@ export function Board({
   reorderable?: boolean;
 }) {
   const [activeTask, setActiveTask] = useState<TaskWithRelations | null>(null);
+
+  // Drag maths and rendering both work off the visible set, so drop
+  // positions are computed against the cards actually on screen.
+  const tasks = allTasks.filter(
+    (t) => t.status !== "done" || completedToday(t)
+  );
 
   // Small activation distance keeps card links clickable.
   const sensors = useSensors(
