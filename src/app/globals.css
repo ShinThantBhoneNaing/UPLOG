@@ -39,6 +39,7 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-sticky: var(--sticky);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
@@ -84,6 +85,7 @@
   --warning-foreground: oklch(0.28 0.05 72);
   --info: oklch(0.52 0.07 185);
   --info-foreground: oklch(0.985 0.008 70);
+  --sticky: oklch(0.73 0.13 72); /* note paper; user-customizable */
   --border: oklch(0.45 0.025 45 / 35%);
   --input: oklch(0.45 0.025 45 / 45%);
   --ring: oklch(0.58 0.165 45);
@@ -125,6 +127,7 @@
   --warning-foreground: oklch(0.24 0.05 72);
   --info: oklch(0.7 0.08 190);
   --info-foreground: oklch(0.16 0.03 172);
+  --sticky: oklch(0.78 0.13 75); /* note paper; user-customizable */
   --border: oklch(0.98 0.01 80 / 14%);
   --input: oklch(0.98 0.01 80 / 18%);
   --ring: oklch(0.72 0.19 48);
@@ -160,5 +163,27 @@
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: color-mix(in oklch, var(--muted-foreground) 30%, transparent) transparent;
+  }
+
+  /* Lightness slider in the custom-color picker (track color is inline) */
+  .color-slider {
+    appearance: none;
+  }
+  .color-slider::-webkit-slider-thumb {
+    appearance: none;
+    height: 1.25rem;
+    width: 1.25rem;
+    border-radius: 9999px;
+    border: 2px solid #fff;
+    background: transparent;
+    box-shadow: 0 0 0 1px rgb(0 0 0 / 45%);
+  }
+  .color-slider::-moz-range-thumb {
+    height: 1.25rem;
+    width: 1.25rem;
+    border-radius: 9999px;
+    border: 2px solid #fff;
+    background: transparent;
+    box-shadow: 0 0 0 1px rgb(0 0 0 / 45%);
   }
 }

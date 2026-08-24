@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Chivo, Hanken_Grotesk, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
+import { THEME_COLORS_SCRIPT } from "@/features/settings/theme-colors";
 import "./globals.css";
 
 const hankenGrotesk = Hanken_Grotesk({
@@ -40,6 +41,8 @@ export default function RootLayout({
       className={`${hankenGrotesk.variable} ${chivo.variable} ${geistMono.variable}`}
     >
       <body className="antialiased">
+        {/* Re-applies the user's saved custom colors before first paint. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_COLORS_SCRIPT }} />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

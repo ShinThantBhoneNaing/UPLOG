@@ -8,20 +8,21 @@ import type { TaskWithRelations } from "@/types/database";
 type Column = "todo" | "inProgress" | "done";
 
 /**
- * Digital sticky note: solid paper tint per status, folded bottom-right
- * corner, slight tilt that straightens on hover. Calm, not childish.
+ * Digital sticky note: paper tint from the user-customizable --sticky token
+ * (Settings > Appearance > Custom colors); status is carried by the folded
+ * corner color and done-column fade. Slight tilt straightens on hover.
  */
 const PAPER: Record<Column, { bg: string; fold: string }> = {
   todo: {
-    bg: "bg-warning/15 hover:bg-warning/20 dark:bg-warning/12 dark:hover:bg-warning/18",
+    bg: "bg-sticky/15 hover:bg-sticky/20 dark:bg-sticky/12 dark:hover:bg-sticky/18",
     fold: "bg-warning/40",
   },
   inProgress: {
-    bg: "bg-primary/12 hover:bg-primary/18 dark:bg-primary/14 dark:hover:bg-primary/20",
+    bg: "bg-sticky/12 hover:bg-sticky/18 dark:bg-sticky/14 dark:hover:bg-sticky/20",
     fold: "bg-primary/40",
   },
   done: {
-    bg: "bg-success/12 hover:bg-success/18 dark:bg-success/12 dark:hover:bg-success/18",
+    bg: "bg-sticky/12 hover:bg-sticky/18 dark:bg-sticky/12 dark:hover:bg-sticky/18",
     fold: "bg-success/40",
   },
 };
