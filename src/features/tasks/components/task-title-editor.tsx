@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { recordAttachment, updateTask } from "../actions";
+import { handleJiraTitlePaste } from "./jira-title-paste";
 import { DescriptionEditor } from "./description-editor";
 import { RichText } from "./rich-text";
 
@@ -64,6 +65,15 @@ export function TaskTitleEditor({
         <Input
           value={draftTitle}
           onChange={(e) => setDraftTitle(e.target.value)}
+          onPaste={(event) =>
+            handleJiraTitlePaste({
+              event,
+              title: draftTitle,
+              description: draftDescription,
+              setTitle: setDraftTitle,
+              setDescription: setDraftDescription,
+            })
+          }
           maxLength={200}
           aria-label="Task title"
           className="text-lg font-semibold"

@@ -1,18 +1,43 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ImageOff } from "lucide-react";
+import { ExternalLink, ImageOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { parseRichText } from "../attachment-refs";
+import { jiraKeyFromUrl } from "../jira-paste";
 
-/** Plain text with URLs turned into links. */
+/**
+ * Plain text with URLs turned into links. A Jira issue link collapses to
+ * its ticket key, so a description reads "HCM-150 ↗" instead of carrying a
+ * wall of URL. Every link opens in a new tab.
+ */
 function Linkified({ text }: { text: string }) {
   const parts = text.split(/(https?:\/\/[^\s<>"')]+)/g);
   return (
     <>
-      {parts.map((part, i) =>
-        /^https?:\/\//.test(part) ? (
+      {parts.map((part, i) => {
+        if (!/^https?:\/\//.test(part)) return <span key={i}>{part}</span>;
+
+        const issueKey = jiraKeyFromUrl(part);
+        if (issueKey) {
+          return (
+            <a
+              key={i}
+              href={part}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={part}
+              className="mx-0.5 inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 align-baseline text-xs font-semibold text-primary transition-colors hover:border-primary/60 hover:bg-primary/15"
+            >
+              {issueKey}
+              <ExternalLink className="size-3" aria-hidden />
+              <span className="sr-only">(opens in a new tab)</span>
+            </a>
+          );
+        }
+
+        return (
           <a
             key={i}
             href={part}
@@ -22,10 +47,8 @@ function Linkified({ text }: { text: string }) {
           >
             {part}
           </a>
-        ) : (
-          <span key={i}>{part}</span>
-        )
-      )}
+        );
+      })}
     </>
   );
 }

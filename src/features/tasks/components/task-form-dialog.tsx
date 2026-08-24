@@ -30,6 +30,7 @@ import {
   TASK_STATUSES,
   STATUS_META,
 } from "@/lib/utils";
+import { handleJiraTitlePaste } from "./jira-title-paste";
 import { MAX_FILE_SIZE } from "@/lib/validations/task";
 import type { ProfileLite, TaskPriority, TaskStatus } from "@/types/database";
 import { createTask, recordAttachment } from "../actions";
@@ -245,7 +246,16 @@ export function TaskFormDialog({
               id="task-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="What needs to be done?"
+              onPaste={(event) =>
+                handleJiraTitlePaste({
+                  event,
+                  title,
+                  description,
+                  setTitle,
+                  setDescription,
+                })
+              }
+              placeholder="What needs to be done? (paste a Jira link)"
               autoFocus
               required
               maxLength={200}
