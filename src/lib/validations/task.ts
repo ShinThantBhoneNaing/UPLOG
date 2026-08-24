@@ -13,20 +13,20 @@ export const TASK_PRIORITY_VALUES = ["low", "medium", "high", "urgent"] as const
 export const createTaskSchema = z.object({
   title: z.string().trim().min(1, "Give the task a title").max(200),
   description: z.string().trim().max(10000).optional(),
-  projectId: z.uuid().nullable().optional(),
-  assigneeId: z.uuid().nullable().optional(),
+  projectId: z.guid().nullable().optional(),
+  assigneeId: z.guid().nullable().optional(),
   priority: z.enum(TASK_PRIORITY_VALUES).default("medium"),
   status: z.enum(TASK_STATUS_VALUES).default("todo"),
   dueDate: z.iso.date().nullable().optional(),
-  labelIds: z.array(z.uuid()).max(10).optional(),
+  labelIds: z.array(z.guid()).max(10).optional(),
 });
 
 export const updateTaskSchema = z.object({
-  id: z.uuid(),
+  id: z.guid(),
   title: z.string().trim().min(1).max(200).optional(),
   description: z.string().trim().max(10000).nullable().optional(),
-  projectId: z.uuid().nullable().optional(),
-  assigneeId: z.uuid().nullable().optional(),
+  projectId: z.guid().nullable().optional(),
+  assigneeId: z.guid().nullable().optional(),
   priority: z.enum(TASK_PRIORITY_VALUES).optional(),
   status: z.enum(TASK_STATUS_VALUES).optional(),
   dueDate: z.iso.date().nullable().optional(),
@@ -34,18 +34,18 @@ export const updateTaskSchema = z.object({
 });
 
 export const commentSchema = z.object({
-  taskId: z.uuid(),
+  taskId: z.guid(),
   body: z.string().trim().min(1, "Write a comment first").max(8000),
-  mentionedUserIds: z.array(z.uuid()).max(20).optional(),
+  mentionedUserIds: z.array(z.guid()).max(20).optional(),
 });
 
 export const editCommentSchema = z.object({
-  id: z.uuid(),
+  id: z.guid(),
   body: z.string().trim().min(1).max(8000),
 });
 
 export const attachmentSchema = z.object({
-  taskId: z.uuid(),
+  taskId: z.guid(),
   fileName: z.string().trim().min(1).max(255),
   storagePath: z.string().min(1).max(500),
   mimeType: z.string().min(1).max(120),

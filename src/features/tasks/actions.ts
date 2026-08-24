@@ -118,7 +118,7 @@ export async function updateTask(
 }
 
 export async function deleteTask(id: string): Promise<ActionResult> {
-  if (!z.uuid().safeParse(id).success) return { ok: false, error: "Invalid task" };
+  if (!z.guid().safeParse(id).success) return { ok: false, error: "Invalid task" };
 
   try {
     const { supabase } = await requireUser();
@@ -148,7 +148,7 @@ export async function setTaskLabels(
   labelIds: string[]
 ): Promise<ActionResult> {
   const parsed = z
-    .object({ taskId: z.uuid(), labelIds: z.array(z.uuid()).max(10) })
+    .object({ taskId: z.guid(), labelIds: z.array(z.guid()).max(10) })
     .safeParse({ taskId, labelIds });
   if (!parsed.success) return { ok: false, error: "Invalid input" };
 
@@ -251,7 +251,7 @@ export async function editComment(
 }
 
 export async function deleteComment(id: string): Promise<ActionResult> {
-  if (!z.uuid().safeParse(id).success) return { ok: false, error: "Invalid comment" };
+  if (!z.guid().safeParse(id).success) return { ok: false, error: "Invalid comment" };
 
   try {
     const { supabase } = await requireUser();
@@ -318,7 +318,7 @@ export async function recordAttachment(
 }
 
 export async function deleteAttachment(id: string): Promise<ActionResult> {
-  if (!z.uuid().safeParse(id).success) return { ok: false, error: "Invalid file" };
+  if (!z.guid().safeParse(id).success) return { ok: false, error: "Invalid file" };
 
   try {
     const { supabase } = await requireUser();

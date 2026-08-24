@@ -21,7 +21,7 @@ export default async function SharedStandupPage({
   searchParams: Promise<{ date?: string }>;
 }) {
   const { token } = await params;
-  if (!z.uuid().safeParse(token).success) notFound();
+  if (!z.guid().safeParse(token).success) notFound();
 
   const { date: rawDate } = await searchParams;
   const today = new Date().toISOString().slice(0, 10);

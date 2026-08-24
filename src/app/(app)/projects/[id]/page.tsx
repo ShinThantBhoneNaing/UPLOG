@@ -32,7 +32,7 @@ export default async function ProjectDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  if (!z.uuid().safeParse(id).success) notFound();
+  if (!z.guid().safeParse(id).success) notFound();
 
   const profile = await getCurrentProfile();
   if (profile.role === "member") redirect("/dashboard");

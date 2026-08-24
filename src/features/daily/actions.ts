@@ -7,7 +7,7 @@ import { GENERIC_ERROR } from "@/lib/utils";
 
 const dailyUpdateSchema = z.object({
   summary: z.string().trim().min(1, "Write a short summary first").max(8000),
-  taskIds: z.array(z.uuid()).max(30).optional(),
+  taskIds: z.array(z.guid()).max(30).optional(),
 });
 
 export type ActionResult = { ok: true } | { ok: false; error: string };

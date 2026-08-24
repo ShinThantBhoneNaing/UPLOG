@@ -24,9 +24,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { TASK_PRIORITIES, PRIORITY_META } from "@/lib/utils";
+import {
+  TASK_PRIORITIES,
+  PRIORITY_META,
+  TASK_STATUSES,
+  STATUS_META,
+} from "@/lib/utils";
 import { MAX_FILE_SIZE } from "@/lib/validations/task";
-import type { ProfileLite, TaskPriority } from "@/types/database";
+import type { ProfileLite, TaskPriority, TaskStatus } from "@/types/database";
 import { createTask, recordAttachment } from "../actions";
 
 const UNSET = "__none__";
@@ -42,25 +47,43 @@ export function TaskFormDialog({
   profiles,
   projects,
   defaultProjectId,
+  defaultAssigneeId,
+  defaultStatus = "todo",
   currentUserId,
   trigger,
+  open: openProp,
+  onOpenChange,
 }: {
   profiles: ProfileLite[];
   projects: { id: string; name: string }[];
   defaultProjectId?: string;
+  /** Pre-selected assignee; falls back to currentUserId. */
+  defaultAssigneeId?: string;
+  /** Column the task is being created into. */
+  defaultStatus?: TaskStatus;
   /** New tasks are assigned to this user by default (changeable). */
   currentUserId?: string;
   trigger?: React.ReactElement;
+  /** Controlled mode: omit `trigger` and drive the dialog from the parent. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = openProp ?? uncontrolledOpen;
+  function setOpen(next: boolean) {
+    if (openProp === undefined) setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  }
   const [pending, startTransition] = useTransition();
   const imageInputRef = useRef<HTMLInputElement>(null);
 
+  const initialAssignee = defaultAssigneeId ?? currentUserId ?? UNSET;
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [projectId, setProjectId] = useState(defaultProjectId ?? UNSET);
-  const [assigneeId, setAssigneeId] = useState(currentUserId ?? UNSET);
+  const [assigneeId, setAssigneeId] = useState(initialAssignee);
+  const [status, setStatus] = useState<TaskStatus>(defaultStatus);
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [dueDate, setDueDate] = useState("");
   const [images, setImages] = useState<PendingImage[]>([]);
@@ -100,7 +123,9 @@ export function TaskFormDialog({
     setTitle("");
     setDescription("");
     setDueDate("");
-    setAssigneeId(currentUserId ?? UNSET);
+    setProjectId(defaultProjectId ?? UNSET);
+    setAssigneeId(initialAssignee);
+    setStatus(defaultStatus);
     setPriority("medium");
     images.forEach((i) => URL.revokeObjectURL(i.previewUrl));
     setImages([]);
@@ -114,6 +139,7 @@ export function TaskFormDialog({
         projectId: projectId === UNSET ? null : projectId,
         assigneeId: assigneeId === UNSET ? null : assigneeId,
         priority,
+        status,
         dueDate: dueDate || null,
       });
       if (!result.ok) {
@@ -158,15 +184,17 @@ export function TaskFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={
-          trigger ?? (
-            <Button>
-              <Plus aria-hidden /> New task
-            </Button>
-          )
-        }
-      />
+      {openProp === undefined && (
+        <DialogTrigger
+          render={
+            trigger ?? (
+              <Button>
+                <Plus aria-hidden /> New task
+              </Button>
+            )
+          }
+        />
+      )}
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>New task</DialogTitle>
@@ -251,6 +279,28 @@ export function TaskFormDialog({
                     <SelectItem key={p.id} value={p.id}>
                       {p.full_name}
                       {p.id === currentUserId && " (you)"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="task-status">Status</Label>
+              <Select
+                value={status}
+                onValueChange={(v) => setStatus((v ?? "todo") as TaskStatus)}
+                items={Object.fromEntries(
+                  TASK_STATUSES.map((s) => [s, STATUS_META[s].label])
+                )}
+              >
+                <SelectTrigger id="task-status" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TASK_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {STATUS_META[s].label}
                     </SelectItem>
                   ))}
                 </SelectContent>

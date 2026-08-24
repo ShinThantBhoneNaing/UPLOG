@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
  * assignee — rate-limited to once per task/actor/hour.
  */
 export async function notifyMoveAttempt(taskId: string): Promise<void> {
-  if (!z.uuid().safeParse(taskId).success) return;
+  if (!z.guid().safeParse(taskId).success) return;
   try {
     const supabase = await createClient();
     await supabase.rpc("notify_move_attempt", { p_task_id: taskId });

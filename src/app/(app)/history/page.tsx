@@ -20,8 +20,8 @@ const PAGE_SIZE = 50;
 
 const filterSchema = z.object({
   q: z.string().max(200).optional(),
-  user: z.uuid().optional(),
-  project: z.uuid().optional(),
+  user: z.guid().optional(),
+  project: z.guid().optional(),
   type: z
     .enum([
       "task_created", "task_updated", "task_status_changed", "task_assigned",

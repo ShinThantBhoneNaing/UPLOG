@@ -24,6 +24,7 @@ import {
   ClipboardList,
   Maximize2,
   Minimize2,
+  Plus,
   Presentation,
   Search,
   X,
@@ -105,12 +106,19 @@ function DraggableSticky({
 function DroppableCell({
   userId,
   column,
+  columnLabel,
+  employeeName,
   enabled,
+  onQuickAdd,
   children,
 }: {
   userId: string;
   column: Column;
+  columnLabel: string;
+  employeeName: string;
   enabled: boolean;
+  /** Absent on past days, where the board is a read-only record. */
+  onQuickAdd?: (userId: string, column: Column) => void;
   children: React.ReactNode;
 }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -126,6 +134,21 @@ function DroppableCell({
       )}
     >
       {children}
+      {onQuickAdd && (
+        <button
+          type="button"
+          onClick={() => onQuickAdd(userId, column)}
+          aria-label={`Add a task for ${employeeName} in ${columnLabel}`}
+          className={cn(
+            "flex items-center justify-center gap-1 rounded-md border border-dashed py-1.5",
+            "text-xs text-muted-foreground opacity-60 transition-all",
+            "hover:border-primary/50 hover:text-primary hover:opacity-100",
+            "focus-visible:opacity-100"
+          )}
+        >
+          <Plus className="size-3.5" aria-hidden /> Add
+        </button>
+      )}
     </div>
   );
 }
@@ -163,6 +186,11 @@ export function StandupBoard({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeTask, setActiveTask] = useState<TaskWithRelations | null>(null);
   const [previewTask, setPreviewTask] = useState<TaskWithRelations | null>(null);
+  // Quick-add target: which employee's row and which column the "+" was in.
+  const [quickAdd, setQuickAdd] = useState<{
+    assigneeId: string;
+    status: TaskStatus;
+  } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
@@ -357,6 +385,9 @@ export function StandupBoard({
   }, [filteredRows]);
   const dndEnabled = data.isToday;
   const large = meetingMode;
+  // An active project filter becomes the default for tasks created here.
+  const filterProjectId =
+    project !== ALL && project !== NOPROJ ? project : undefined;
 
   const summaryItems = [
     { label: "Employees", value: filteredRows.length },
@@ -410,6 +441,21 @@ export function StandupBoard({
           )}
         </div>
         <div className="flex items-center gap-2">
+          {data.isToday && (
+            <TaskFormDialog
+              // Re-mount when the project filter changes so it prefills.
+              key={`header-${filterProjectId ?? "none"}`}
+              profiles={data.profiles}
+              projects={data.projects}
+              currentUserId={currentUserId}
+              defaultProjectId={filterProjectId}
+              trigger={
+                <Button size="sm">
+                  <Plus aria-hidden /> New task
+                </Button>
+              }
+            />
+          )}
           {shareToken && !meetingMode && (
             <Button
               variant="outline"
@@ -828,7 +874,18 @@ export function StandupBoard({
                         key={c.key}
                         userId={row.profile.id}
                         column={c.key}
+                        columnLabel={c.label}
+                        employeeName={row.profile.full_name}
                         enabled={dndEnabled}
+                        onQuickAdd={
+                          data.isToday
+                            ? (assigneeId, col) =>
+                                setQuickAdd({
+                                  assigneeId,
+                                  status: COLUMN_STATUS[col],
+                                })
+                            : undefined
+                        }
                       >
                         {row[c.key].map((t) => (
                           <DraggableSticky
@@ -873,6 +930,23 @@ export function StandupBoard({
       )}
 
       <TaskPreviewDialog task={previewTask} onClose={() => setPreviewTask(null)} />
+
+      {/* Quick add from a board cell: assignee and column are pre-filled. */}
+      {quickAdd && (
+        <TaskFormDialog
+          key={`${quickAdd.assigneeId}-${quickAdd.status}`}
+          open
+          onOpenChange={(next) => {
+            if (!next) setQuickAdd(null);
+          }}
+          profiles={data.profiles}
+          projects={data.projects}
+          currentUserId={currentUserId}
+          defaultAssigneeId={quickAdd.assigneeId}
+          defaultStatus={quickAdd.status}
+          defaultProjectId={filterProjectId}
+        />
+      )}
 
       {/* ---------- meeting history ---------- */}
       {!meetingMode && (

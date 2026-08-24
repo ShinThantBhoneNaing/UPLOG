@@ -13,7 +13,7 @@ const projectSchema = z.object({
 });
 
 const updateProjectSchema = z.object({
-  id: z.uuid(),
+  id: z.guid(),
   name: z.string().trim().min(1).max(120).optional(),
   description: z.string().trim().max(4000).nullable().optional(),
   status: z.enum(["active", "paused", "completed", "archived"]).optional(),
@@ -111,7 +111,7 @@ export async function addProjectMember(
   projectId: string,
   userId: string
 ): Promise<ActionResult> {
-  if (!z.uuid().safeParse(projectId).success || !z.uuid().safeParse(userId).success) {
+  if (!z.guid().safeParse(projectId).success || !z.guid().safeParse(userId).success) {
     return { ok: false, error: "Invalid input" };
   }
   try {
@@ -136,7 +136,7 @@ export async function removeProjectMember(
   projectId: string,
   userId: string
 ): Promise<ActionResult> {
-  if (!z.uuid().safeParse(projectId).success || !z.uuid().safeParse(userId).success) {
+  if (!z.guid().safeParse(projectId).success || !z.guid().safeParse(userId).success) {
     return { ok: false, error: "Invalid input" };
   }
   try {

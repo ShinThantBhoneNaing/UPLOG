@@ -26,7 +26,7 @@ export default async function MemberPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  if (!z.uuid().safeParse(id).success) notFound();
+  if (!z.guid().safeParse(id).success) notFound();
 
   const supabase = await createClient();
 

@@ -8,7 +8,7 @@ import { GENERIC_ERROR } from "@/lib/utils";
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
 const adminUpdateUserSchema = z.object({
-  id: z.uuid(),
+  id: z.guid(),
   fullName: z.string().trim().min(1).max(120).optional(),
   jobTitle: z.string().trim().max(120).nullable().optional(),
   department: z.string().trim().max(120).nullable().optional(),
