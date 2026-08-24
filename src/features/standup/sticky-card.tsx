@@ -51,7 +51,7 @@ export function StickyCard({
   const paper = PAPER[column];
 
   const className = cn(
-    "relative block w-full rounded-md p-3 text-left shadow-sm transition-all duration-150",
+    "font-handwriting relative block w-full rounded-md p-3 text-left shadow-sm transition-all duration-150",
     "hover:rotate-0 hover:shadow-md hover:-translate-y-0.5",
     "[clip-path:polygon(0_0,100%_0,100%_calc(100%-11px),calc(100%-11px)_100%,0_100%)]",
     paper.bg,
@@ -72,8 +72,9 @@ export function StickyCard({
 
       <p
         className={cn(
+          // Handwriting face runs small — one step up from the old sizes.
           "font-medium leading-snug",
-          large ? "line-clamp-3 text-sm" : "line-clamp-2 text-xs",
+          large ? "line-clamp-3 text-base" : "line-clamp-2 text-sm",
           column === "done" && "text-muted-foreground"
         )}
       >
@@ -83,7 +84,7 @@ export function StickyCard({
       <div
         className={cn(
           "mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5",
-          large ? "text-xs" : "text-[10px]"
+          large ? "text-sm" : "text-xs"
         )}
       >
         {urgent && (
