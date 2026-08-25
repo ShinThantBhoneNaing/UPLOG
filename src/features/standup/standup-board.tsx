@@ -30,6 +30,7 @@ import {
   ClipboardList,
   Maximize2,
   Minimize2,
+  Paperclip,
   Plus,
   Presentation,
   Search,
@@ -505,19 +506,19 @@ export function StandupBoard({
       )}
     >
       {/* ---------- header ---------- */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1
             className={cn(
               "flex items-center gap-2 font-semibold tracking-tight",
-              meetingMode ? "text-2xl" : "text-xl sm:text-2xl"
+              meetingMode ? "text-2xl" : "text-lg sm:text-xl"
             )}
           >
-            <Presentation className="size-6 text-primary" aria-hidden />
+            <Presentation className="size-5 text-primary" aria-hidden />
             Standard Meeting
           </h1>
           {!meetingMode && (
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-0.5 text-xs text-muted-foreground">
               Your morning stand-up wall — powered by the team&apos;s real tasks.
             </p>
           )}
@@ -532,7 +533,7 @@ export function StandupBoard({
               currentUserId={currentUserId}
               defaultProjectId={filterProjectId}
               trigger={
-                <Button size="sm">
+                <Button size="xs">
                   <Plus aria-hidden /> New task
                 </Button>
               }
@@ -541,9 +542,15 @@ export function StandupBoard({
           {shareToken && !meetingMode && (
             <Button
               variant="outline"
-              size="sm"
+              size="xs"
               onClick={() => {
-                const url = `${window.location.origin}/share/standup/${shareToken}`;
+                // Carry the sharer's custom colors along in the link so
+                // viewers see the same board (settings live per browser).
+                const saved = localStorage.getItem("uplog-colors");
+                const theme = saved
+                  ? `?theme=${encodeURIComponent(btoa(saved))}`
+                  : "";
+                const url = `${window.location.origin}/share/standup/${shareToken}${theme}`;
                 void navigator.clipboard
                   .writeText(url)
                   .then(() => toast.success("Share link copied — anyone with it can view today's board (read-only)."))
@@ -555,7 +562,7 @@ export function StandupBoard({
           )}
           <Button
             variant={meetingMode ? "default" : "outline"}
-            size="sm"
+            size="xs"
             onClick={() => setMeetingMode((m) => !m)}
           >
             {meetingMode ? (
@@ -570,7 +577,7 @@ export function StandupBoard({
           </Button>
           <Button
             variant="outline"
-            size="sm"
+            size="icon-xs"
             onClick={() => void toggleFullscreen()}
             aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
           >
@@ -580,7 +587,7 @@ export function StandupBoard({
       </div>
 
       {/* ---------- date bar ---------- */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
         <div className="flex items-center rounded-lg border bg-card">
           <Button
             variant="ghost"
@@ -593,7 +600,7 @@ export function StandupBoard({
           <span
             className={cn(
               "px-2 text-center font-medium tabular-nums",
-              meetingMode ? "min-w-64 text-base" : "min-w-52 text-sm"
+              meetingMode ? "min-w-64 text-base" : "min-w-44 text-xs"
             )}
           >
             {dateLabel}
@@ -611,14 +618,14 @@ export function StandupBoard({
 
         <Button
           variant={data.date === today ? "default" : "outline"}
-          size="sm"
+          size="xs"
           onClick={() => go(today)}
         >
           Today
         </Button>
         <Button
           variant={data.date === yesterday ? "default" : "outline"}
-          size="sm"
+          size="xs"
           onClick={() => go(yesterday)}
         >
           Yesterday
@@ -634,7 +641,7 @@ export function StandupBoard({
             value={data.date}
             max={today}
             onChange={(e) => e.target.value && go(e.target.value)}
-            className="h-8 w-40 pl-8 text-sm"
+            className="h-7 w-36 pl-8 text-xs"
           />
         </label>
 
@@ -649,7 +656,7 @@ export function StandupBoard({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search tasks…"
-                className="h-8 pl-8 text-sm"
+                className="h-7 pl-8 text-xs"
                 aria-label="Search tasks on the board"
               />
             </div>
@@ -661,7 +668,7 @@ export function StandupBoard({
                 ...Object.fromEntries(data.profiles.map((p) => [p.id, p.full_name])),
               }}
             >
-              <SelectTrigger className="h-8 w-36 text-sm" aria-label="Filter by employee">
+              <SelectTrigger className="h-7 w-36 text-xs" aria-label="Filter by employee">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -681,7 +688,7 @@ export function StandupBoard({
                 ...Object.fromEntries(data.projects.map((p) => [p.id, p.name])),
               }}
             >
-              <SelectTrigger className="h-8 w-36 text-sm" aria-label="Filter by project">
+              <SelectTrigger className="h-7 w-36 text-xs" aria-label="Filter by project">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -703,7 +710,7 @@ export function StandupBoard({
                 done: "Done",
               }}
             >
-              <SelectTrigger className="h-8 w-32 text-sm" aria-label="Filter by status">
+              <SelectTrigger className="h-7 w-32 text-xs" aria-label="Filter by status">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -716,14 +723,14 @@ export function StandupBoard({
             <SortSelect
               value={sort}
               onChange={setSort}
-              className="h-8 w-40 text-sm"
+              className="h-7 w-36 text-xs"
             />
           </>
         )}
       </div>
 
       {/* ---------- view toggle ---------- */}
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-2 flex items-center gap-2">
         <Tabs
           value={grouping}
           onValueChange={(v) => setGrouping(v as "project" | "employee")}
@@ -755,8 +762,8 @@ export function StandupBoard({
       {/* ---------- summary ---------- */}
       <div
         className={cn(
-          "mb-4 flex flex-wrap items-center gap-x-5 gap-y-1 rounded-xl border bg-card px-4",
-          meetingMode ? "py-3 text-base" : "py-2.5 text-sm"
+          "mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border bg-card px-4",
+          meetingMode ? "py-3 text-base" : "py-2 text-sm"
         )}
       >
         {summaryItems.map((s) => (
@@ -853,17 +860,29 @@ export function StandupBoard({
                           setGrouping("employee");
                         }}
                         className={cn(
-                          "relative rounded-md bg-accent p-4 text-left shadow-sm transition-all",
-                          "hover:-translate-y-0.5 hover:rotate-0 hover:shadow-md",
-                          "[clip-path:polygon(0_0,100%_0,100%_calc(100%-12px),calc(100%-12px)_100%,0_100%)]",
+                          "relative p-4 pt-[18px] text-left text-project-card-foreground transition-all",
+                          "hover:-translate-y-0.5 hover:rotate-0",
                           tiltForGroup((e.profile.id[0] ?? "x") + g.name)
                         )}
                       >
+                        {/* stacked sheets + paperclip, like a pinned note pile */}
                         <span
                           aria-hidden
-                          className="absolute bottom-0 right-0 size-3 bg-primary/30 [clip-path:polygon(0_0,100%_0,0_100%)]"
+                          className="absolute inset-0 rotate-[2deg] rounded-sm bg-project-card/60 shadow-sm"
                         />
-                        <div className="flex items-start justify-between gap-2">
+                        <span
+                          aria-hidden
+                          className="absolute inset-0 -rotate-[1.5deg] rounded-sm bg-project-card/75"
+                        />
+                        <span
+                          aria-hidden
+                          className="absolute inset-0 rounded-sm bg-project-card shadow-sm"
+                        />
+                        <Paperclip
+                          aria-hidden
+                          className="absolute -top-2 left-4 size-4 -rotate-12 text-primary"
+                        />
+                        <div className="relative flex items-start justify-between gap-2">
                           <p
                             className={cn(
                               "line-clamp-2 font-semibold leading-snug",
@@ -876,7 +895,7 @@ export function StandupBoard({
                             {total}
                           </span>
                         </div>
-                        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                        <div className="relative mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-project-card-foreground/70">
                           <span className="flex items-center gap-1">
                             <span className="size-1.5 rounded-full bg-warning" aria-hidden />
                             {g.todo}

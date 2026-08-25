@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Logo } from "@/components/brand/logo";
+import { LogoMark } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/types/database";
 import { MAIN_NAV, SECONDARY_NAV, visibleFor, type NavItem } from "./nav-config";
@@ -27,7 +27,10 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
         )}
         aria-hidden
       />
-      {item.label}
+      {/* Label fades in when the rail expands on hover/focus. */}
+      <span className="whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/side:opacity-100 group-focus-within/side:opacity-100">
+        {item.label}
+      </span>
     </Link>
   );
 }
@@ -38,14 +41,28 @@ export function Sidebar({ role }: { role: UserRole }) {
     href === "/dashboard" ? pathname === href : pathname.startsWith(href);
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-sidebar-border bg-sidebar lg:flex">
-      <div className="flex h-16 items-center px-5">
-        <Link href="/dashboard" aria-label="UPLOG dashboard">
-          <Logo
+    <aside
+      className={cn(
+        // Collapsed icon rail; expands over the content on hover or when a
+        // nav link inside has keyboard focus. Content stays at lg:pl-16.
+        "group/side fixed inset-y-0 left-0 z-40 hidden w-16 flex-col overflow-x-hidden",
+        "border-r border-sidebar-border bg-sidebar transition-[width] duration-200",
+        "hover:w-60 hover:shadow-xl focus-within:w-60 lg:flex"
+      )}
+    >
+      <div className="flex h-16 shrink-0 items-center px-[22px]">
+        <Link
+          href="/dashboard"
+          aria-label="UPLOG dashboard"
+          className="flex items-center gap-2"
+        >
+          <LogoMark
+            className="size-6 shrink-0"
             ink="var(--color-sidebar-accent-foreground)"
-            textClassName="text-base text-sidebar-accent-foreground"
-            markClassName="size-6"
           />
+          <span className="whitespace-nowrap text-base font-bold tracking-[0.18em] text-sidebar-accent-foreground opacity-0 transition-opacity duration-150 group-hover/side:opacity-100 group-focus-within/side:opacity-100">
+            <span className="text-sidebar-primary">UP</span>LOG
+          </span>
         </Link>
       </div>
 
