@@ -16,7 +16,7 @@ export default async function AppLayout({
     <div className="min-h-dvh">
       <Sidebar role={profile.role} />
 
-      <div className="lg:pl-60">
+      <div className="lg:pl-16">
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-3 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6">
           <CommandSearch />
           <div className="flex items-center gap-1.5">

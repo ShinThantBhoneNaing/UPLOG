@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 import { THEME_COLORS_SCRIPT } from "@/features/settings/theme-colors";
 import { THEME_ICONS_SCRIPT } from "@/features/settings/theme-icons";
+import { THEME_FAVICON_SCRIPT } from "@/features/settings/theme-favicon";
 import "./globals.css";
 
 const hankenGrotesk = Hanken_Grotesk({
@@ -49,11 +50,12 @@ export default function RootLayout({
       className={`${hankenGrotesk.variable} ${chivo.variable} ${geistMono.variable} ${kalam.variable}`}
     >
       <body className="antialiased">
-        {/* Re-applies the user's saved custom colors and icon style before
-            first paint. */}
+        {/* Re-applies the user's saved custom colors, icon style and web
+            icon before first paint. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: THEME_COLORS_SCRIPT + THEME_ICONS_SCRIPT,
+            __html:
+              THEME_COLORS_SCRIPT + THEME_ICONS_SCRIPT + THEME_FAVICON_SCRIPT,
           }}
         />
         <ThemeProvider

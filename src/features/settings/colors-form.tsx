@@ -55,6 +55,12 @@ const TARGETS: Array<{
     description: "Navigation panel",
     varName: "--sidebar",
   },
+  {
+    key: "project",
+    label: "Project cards",
+    description: "Stand-up projects view tiles",
+    varName: "--project-card",
+  },
 ];
 
 const PRESETS = [

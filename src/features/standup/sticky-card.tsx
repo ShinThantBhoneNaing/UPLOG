@@ -1,30 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { Flag } from "lucide-react";
+import { Flag, Paperclip } from "lucide-react";
 import { cn, formatHours } from "@/lib/utils";
 import type { TaskWithRelations } from "@/types/database";
 
 type Column = "todo" | "inProgress" | "done";
 
 /**
- * Digital sticky note: paper tint from the user-customizable --sticky token
- * (Settings > Appearance > Custom colors); status is carried by the folded
- * corner color and done-column fade. Slight tilt straightens on hover.
+ * Digital sticky note: a small stack of paper sheets held by a paperclip.
+ * Paper tint comes from the user-customizable --sticky token (Settings >
+ * Appearance > Custom colors); status is carried by the paperclip color and
+ * the done-column fade. Slight tilt straightens on hover.
  */
-const PAPER: Record<Column, { bg: string; fold: string }> = {
-  todo: {
-    bg: "bg-sticky/15 hover:bg-sticky/20 dark:bg-sticky/12 dark:hover:bg-sticky/18",
-    fold: "bg-warning/40",
-  },
-  inProgress: {
-    bg: "bg-sticky/12 hover:bg-sticky/18 dark:bg-sticky/14 dark:hover:bg-sticky/20",
-    fold: "bg-primary/40",
-  },
-  done: {
-    bg: "bg-sticky/12 hover:bg-sticky/18 dark:bg-sticky/12 dark:hover:bg-sticky/18",
-    fold: "bg-success/40",
-  },
+const PAPER: Record<Column, { clip: string }> = {
+  todo: { clip: "text-warning" },
+  inProgress: { clip: "text-primary" },
+  done: { clip: "text-success" },
 };
 
 /** Tiny deterministic tilt per card — straightens on hover. */
@@ -51,29 +43,38 @@ export function StickyCard({
   const paper = PAPER[column];
 
   const className = cn(
-    "font-handwriting relative block w-full rounded-md p-3 text-left shadow-sm transition-all duration-150",
-    "hover:rotate-0 hover:shadow-md hover:-translate-y-0.5",
-    "[clip-path:polygon(0_0,100%_0,100%_calc(100%-11px),calc(100%-11px)_100%,0_100%)]",
-    paper.bg,
+    "font-handwriting relative block w-full p-3 pt-3.5 text-left transition-all duration-150",
+    "hover:rotate-0 hover:-translate-y-0.5",
     tilt(task.id),
     column === "done" && "opacity-85"
   );
 
   const content = (
     <>
-      {/* folded corner */}
+      {/* stacked sheets peeking out behind the top paper */}
       <span
         aria-hidden
-        className={cn(
-          "absolute bottom-0 right-0 size-[11px] [clip-path:polygon(0_0,100%_0,0_100%)]",
-          paper.fold
-        )}
+        className="absolute inset-0 rotate-[2deg] rounded-sm bg-sticky/40 shadow-sm"
+      />
+      <span
+        aria-hidden
+        className="absolute inset-0 -rotate-[1.5deg] rounded-sm bg-sticky/50"
+      />
+      {/* top paper */}
+      <span
+        aria-hidden
+        className="absolute inset-0 rounded-sm bg-sticky/20 shadow-sm dark:bg-sticky/15"
+      />
+      {/* status paperclip */}
+      <Paperclip
+        aria-hidden
+        className={cn("absolute -top-2 left-4 size-4 -rotate-12", paper.clip)}
       />
 
       <p
         className={cn(
           // Handwriting face runs small — one step up from the old sizes.
-          "font-medium leading-snug",
+          "relative font-medium leading-snug",
           large ? "line-clamp-3 text-base" : "line-clamp-2 text-sm",
           column === "done" && "text-muted-foreground"
         )}
@@ -83,7 +84,7 @@ export function StickyCard({
 
       <div
         className={cn(
-          "mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5",
+          "relative mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5",
           large ? "text-sm" : "text-xs"
         )}
       >

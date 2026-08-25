@@ -1,9 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { addDays, format, parseISO } from "date-fns";
-import { CalendarDays, ChevronLeft, ChevronRight, Flag, FolderKanban, Search, Users } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Flag, FolderKanban, Paperclip, Search, Users } from "lucide-react";
+import {
+  applyCustomColors,
+  parseCustomColors,
+} from "@/features/settings/theme-colors";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/brand/logo";
 import { Input } from "@/components/ui/input";
@@ -44,10 +48,11 @@ export interface ShareData {
 const ALL = "__all__";
 const NOPROJ = "__noproj__";
 type Column = "todo" | "in_progress" | "done";
-const COLUMNS: { key: Column; label: string; dot: string; paper: string; fold: string }[] = [
-  { key: "todo", label: "To Do", dot: "bg-warning", paper: "bg-warning/15 dark:bg-warning/12", fold: "bg-warning/40" },
-  { key: "in_progress", label: "In Progress", dot: "bg-primary", paper: "bg-primary/12 dark:bg-primary/14", fold: "bg-primary/40" },
-  { key: "done", label: "Done", dot: "bg-success", paper: "bg-success/12", fold: "bg-success/40" },
+/* Mirrors sticky-card.tsx: paper from --sticky, status via paperclip color. */
+const COLUMNS: { key: Column; label: string; dot: string; clip: string }[] = [
+  { key: "todo", label: "To Do", dot: "bg-warning", clip: "text-warning" },
+  { key: "in_progress", label: "In Progress", dot: "bg-primary", clip: "text-primary" },
+  { key: "done", label: "Done", dot: "bg-success", clip: "text-success" },
 ];
 
 function tiltForGroup(key: string): string {
@@ -64,42 +69,48 @@ function tilt(id: string): string {
 
 function ShareSticky({
   task,
-  paper,
-  fold,
+  clip,
   done,
 }: {
   task: ShareTask;
-  paper: string;
-  fold: string;
+  clip: string;
   done?: boolean;
 }) {
   const urgent = task.priority === "urgent" || task.priority === "high";
   return (
     <div
       className={cn(
-        "relative rounded-md p-3 shadow-sm",
-        "[clip-path:polygon(0_0,100%_0,100%_calc(100%-11px),calc(100%-11px)_100%,0_100%)]",
-        paper,
+        "font-handwriting relative p-3 pt-3.5",
         tilt(task.id),
         done && "opacity-85"
       )}
     >
+      {/* stacked sheets + status paperclip, mirroring sticky-card.tsx */}
       <span
         aria-hidden
-        className={cn(
-          "absolute bottom-0 right-0 size-[11px] [clip-path:polygon(0_0,100%_0,0_100%)]",
-          fold
-        )}
+        className="absolute inset-0 rotate-[2deg] rounded-sm bg-sticky/40 shadow-sm"
+      />
+      <span
+        aria-hidden
+        className="absolute inset-0 -rotate-[1.5deg] rounded-sm bg-sticky/50"
+      />
+      <span
+        aria-hidden
+        className="absolute inset-0 rounded-sm bg-sticky/20 shadow-sm dark:bg-sticky/15"
+      />
+      <Paperclip
+        aria-hidden
+        className={cn("absolute -top-2 left-4 size-4 -rotate-12", clip)}
       />
       <p
         className={cn(
-          "line-clamp-3 text-sm font-medium leading-snug",
+          "relative line-clamp-3 text-sm font-medium leading-snug",
           done && "text-muted-foreground"
         )}
       >
         {task.title}
       </p>
-      <div className="mt-2 flex flex-wrap items-center gap-x-2 text-xs">
+      <div className="relative mt-2 flex flex-wrap items-center gap-x-2 text-xs">
         {urgent && (
           <span
             className={cn(
@@ -139,14 +150,27 @@ export function ShareBoard({
   const [query, setQuery] = useState("");
   const [grouping, setGrouping] = useState<"project" | "employee">("employee");
 
+  // The share link can carry the sharer's custom colors (?theme=base64 JSON)
+  // so viewers see the board the way the sharer styled it.
+  useEffect(() => {
+    const encoded = new URLSearchParams(window.location.search).get("theme");
+    if (!encoded) return;
+    try {
+      applyCustomColors(parseCustomColors(atob(encoded)));
+    } catch {
+      // malformed param — keep default theme
+    }
+  }, []);
+
   const today = format(new Date(), "yyyy-MM-dd");
   const yesterday = format(addDays(parseISO(`${today}T00:00:00`), -1), "yyyy-MM-dd");
   function go(date: string) {
-    router.push(
-      date === today
-        ? `/share/standup/${token}`
-        : `/share/standup/${token}?date=${date}`
-    );
+    // Preserve the theme param across date navigation.
+    const params = new URLSearchParams(window.location.search);
+    if (date === today) params.delete("date");
+    else params.set("date", date);
+    const qs = params.toString();
+    router.push(`/share/standup/${token}${qs ? `?${qs}` : ""}`);
   }
   const shift = (days: number) =>
     go(format(addDays(parseISO(`${data.date}T00:00:00`), days), "yyyy-MM-dd"));
@@ -474,17 +498,29 @@ export function ShareBoard({
                         setGrouping("employee");
                       }}
                       className={cn(
-                        "relative rounded-md bg-accent p-4 text-left shadow-sm transition-all",
-                        "hover:-translate-y-0.5 hover:rotate-0 hover:shadow-md",
-                        "[clip-path:polygon(0_0,100%_0,100%_calc(100%-12px),calc(100%-12px)_100%,0_100%)]",
+                        "relative p-4 pt-[18px] text-left text-project-card-foreground transition-all",
+                        "hover:-translate-y-0.5 hover:rotate-0",
                         tiltForGroup(e.row.id[0] + g.name)
                       )}
                     >
+                      {/* stacked sheets + paperclip, mirroring standup-board */}
                       <span
                         aria-hidden
-                        className="absolute bottom-0 right-0 size-3 bg-primary/30 [clip-path:polygon(0_0,100%_0,0_100%)]"
+                        className="absolute inset-0 rotate-[2deg] rounded-sm bg-project-card/60 shadow-sm"
                       />
-                      <div className="flex items-start justify-between gap-2">
+                      <span
+                        aria-hidden
+                        className="absolute inset-0 -rotate-[1.5deg] rounded-sm bg-project-card/75"
+                      />
+                      <span
+                        aria-hidden
+                        className="absolute inset-0 rounded-sm bg-project-card shadow-sm"
+                      />
+                      <Paperclip
+                        aria-hidden
+                        className="absolute -top-2 left-4 size-4 -rotate-12 text-primary"
+                      />
+                      <div className="relative flex items-start justify-between gap-2">
                         <p className="line-clamp-2 text-sm font-semibold leading-snug">
                           {g.name}
                         </p>
@@ -492,7 +528,7 @@ export function ShareBoard({
                           {total}
                         </span>
                       </div>
-                      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                      <div className="relative mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-project-card-foreground/70">
                         <span className="flex items-center gap-1">
                           <span className="size-1.5 rounded-full bg-warning" aria-hidden />
                           {g.todo}
@@ -547,8 +583,7 @@ export function ShareBoard({
                       <ShareSticky
                         key={t.id}
                         task={t}
-                        paper={c.paper}
-                        fold={c.fold}
+                        clip={c.clip}
                         done={c.key === "done"}
                       />
                     ))}

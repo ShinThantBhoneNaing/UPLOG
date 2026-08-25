@@ -4,13 +4,31 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Optional local handwriting faces for sticky notes. Drop the files into
+ * public/fonts/ with these exact names; until then the stack silently
+ * falls back to Kalam (see --font-handwriting below).
+ */
+@font-face {
+  font-family: "Hiragenda";
+  src: url("/fonts/Hiragenda.ttf") format("truetype");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Burmese Handwriting";
+  src: url("/fonts/BurmeseHandwriting.ttf") format("truetype");
+  font-display: swap;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-chivo);
-  --font-handwriting: var(--font-kalam);
+  /* Latin glyphs from Hiragenda, Myanmar glyphs fall through to Burmese
+     Handwriting, everything else to Kalam. */
+  --font-handwriting: "Hiragenda", "Burmese Handwriting", var(--font-kalam);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -41,6 +59,8 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   --color-sticky: var(--sticky);
+  --color-project-card: var(--project-card);
+  --color-project-card-foreground: var(--project-card-foreground);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
@@ -87,6 +107,8 @@
   --info: oklch(0.52 0.07 185);
   --info-foreground: oklch(0.985 0.008 70);
   --sticky: oklch(0.73 0.13 72); /* note paper; user-customizable */
+  --project-card: oklch(0.93 0.04 60); /* stand-up project tiles; user-customizable */
+  --project-card-foreground: oklch(0.235 0.02 40);
   --border: oklch(0.45 0.025 45 / 35%);
   --input: oklch(0.45 0.025 45 / 45%);
   --ring: oklch(0.58 0.165 45);
@@ -129,6 +151,8 @@
   --info: oklch(0.7 0.08 190);
   --info-foreground: oklch(0.16 0.03 172);
   --sticky: oklch(0.78 0.13 75); /* note paper; user-customizable */
+  --project-card: oklch(0.31 0.05 55); /* stand-up project tiles; user-customizable */
+  --project-card-foreground: oklch(0.93 0.01 70);
   --border: oklch(0.98 0.01 80 / 14%);
   --input: oklch(0.98 0.01 80 / 18%);
   --ring: oklch(0.72 0.19 48);
@@ -171,7 +195,8 @@
      [class*=...] catches every Tailwind opacity variant of the token. */
   html[data-blur~="primary"] [class*="bg-primary"],
   html[data-blur~="secondary"] [class*="bg-secondary"],
-  html[data-blur~="sticky"] [class*="bg-sticky"] {
+  html[data-blur~="sticky"] [class*="bg-sticky"],
+  html[data-blur~="project"] [class*="bg-project-card"] {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
   }
