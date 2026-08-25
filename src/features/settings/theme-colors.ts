@@ -86,6 +86,11 @@ const VAR_NAMES: Record<CustomColorKey, string[]> = {
     "--popover-foreground",
     "--border",
     "--input",
+    "--muted",
+    "--muted-foreground",
+    "--accent",
+    "--accent-foreground",
+    "color-scheme",
   ],
   sidebar: [
     "--sidebar",
@@ -135,6 +140,14 @@ function varsFor(key: CustomColorKey, c: ColorSetting): Array<[string, string]> 
         ["--popover-foreground", fg],
         ["--border", fg + (isDarkBg ? "24" : "59")],
         ["--input", fg + (isDarkBg ? "2e" : "73")],
+        // Muted/hover surfaces follow the page color too, so no stock-theme
+        // tint survives a background change (search box, kbd chips, hovers).
+        ["--muted", shade(c.hex, isDarkBg ? 0.1 : -0.045)],
+        ["--muted-foreground", fg + "a6"],
+        ["--accent", shade(c.hex, isDarkBg ? 0.13 : -0.07)],
+        ["--accent-foreground", fg],
+        // Native controls (date inputs, scrollbars) match the custom ground.
+        ["color-scheme", isDarkBg ? "dark" : "light"],
       ];
     }
     case "sidebar": {
@@ -176,6 +189,16 @@ export function applyCustomColors(colors: CustomColors) {
     } else {
       for (const name of VAR_NAMES[key]) root.style.removeProperty(name);
     }
+  }
+  // A custom background takes over the whole surface system: if secondary
+  // wasn't explicitly customized, derive it from the background too, so no
+  // light/dark stock tint survives (chips, subtle fills).
+  const bg = colors.background;
+  if (bg && !colors.secondary) {
+    const fg = readableForeground(bg.hex);
+    const isDark = fg === LIGHT_TEXT;
+    root.style.setProperty("--secondary", shade(bg.hex, isDark ? 0.12 : -0.06));
+    root.style.setProperty("--secondary-foreground", fg);
   }
   if (blurred.length > 0) root.setAttribute("data-blur", blurred.join(" "));
   else root.removeAttribute("data-blur");
@@ -231,7 +254,7 @@ export function saveCustomColors(colors: CustomColors) {
  */
 export const THEME_COLORS_SCRIPT = `(function(){try{var c=JSON.parse(localStorage.getItem(${JSON.stringify(
   COLORS_STORAGE_KEY
-)})||"{}");var s=document.documentElement.style,bl=[];function norm(v){if(typeof v==="string")v={hex:v};if(!v||typeof v!=="object"||typeof v.hex!=="string"||!/^#[0-9a-fA-F]{6}$/.test(v.hex))return null;return{hex:v.hex.toLowerCase(),alpha:typeof v.alpha==="number"?Math.min(100,Math.max(0,v.alpha)):100,blur:v.blur===true}}function fg(h){var n=parseInt(h.slice(1),16);return .299*(n>>16&255)+.587*(n>>8&255)+.114*(n&255)>150?"${DARK_TEXT}":"${LIGHT_TEXT}"}function a8(h,a){if(a>=100)return h;var v=Math.round(a*2.55).toString(16);return h+(v.length<2?"0"+v:v)}function sh(h,t){var n=parseInt(h.slice(1),16);function m(x){var v=Math.round(t>=0?x+(255-x)*t:x*(1+t)).toString(16);return v.length<2?"0"+v:v}return"#"+m(n>>16&255)+m(n>>8&255)+m(n&255)}var p=norm(c.primary);if(p){var f=fg(p.hex),h=a8(p.hex,p.alpha);s.setProperty("--primary",h);s.setProperty("--ring",p.hex);s.setProperty("--sidebar-primary",h);s.setProperty("--sidebar-ring",p.hex);s.setProperty("--primary-foreground",f);s.setProperty("--sidebar-primary-foreground",f);if(p.blur)bl.push("primary")}var q=norm(c.secondary);if(q){s.setProperty("--secondary",a8(q.hex,q.alpha));s.setProperty("--secondary-foreground",fg(q.hex));if(q.blur)bl.push("secondary")}var k=norm(c.sticky);if(k){s.setProperty("--sticky",a8(k.hex,k.alpha));if(k.blur)bl.push("sticky")}var b=norm(c.background);if(b){var bf=fg(b.hex),dk=bf==="${LIGHT_TEXT}",cd=a8(sh(b.hex,dk?0.07:0.45),b.alpha);s.setProperty("--background",b.hex);s.setProperty("--foreground",bf);s.setProperty("--card",cd);s.setProperty("--popover",cd);s.setProperty("--card-foreground",bf);s.setProperty("--popover-foreground",bf);s.setProperty("--border",bf+(dk?"24":"59"));s.setProperty("--input",bf+(dk?"2e":"73"));if(b.blur)bl.push("background")}var sb=norm(c.sidebar);if(sb){var sf=fg(sb.hex),sd=sf==="${LIGHT_TEXT}";s.setProperty("--sidebar",a8(sb.hex,sb.alpha));s.setProperty("--sidebar-foreground",sf);s.setProperty("--sidebar-accent",sh(sb.hex,sd?0.09:-0.07));s.setProperty("--sidebar-accent-foreground",sf);s.setProperty("--sidebar-border",sf+(sd?"1f":"3d"));if(sb.blur)bl.push("sidebar")}var pj=norm(c.project);if(pj){s.setProperty("--project-card",a8(pj.hex,pj.alpha));s.setProperty("--project-card-foreground",fg(pj.hex));if(pj.blur)bl.push("project")}var w=norm(c.warning);if(w){s.setProperty("--warning",a8(w.hex,w.alpha));s.setProperty("--warning-foreground",fg(w.hex));if(w.blur)bl.push("warning")}if(bl.length)document.documentElement.setAttribute("data-blur",bl.join(" "))}catch(e){}})();`;
+)})||"{}");var s=document.documentElement.style,bl=[];function norm(v){if(typeof v==="string")v={hex:v};if(!v||typeof v!=="object"||typeof v.hex!=="string"||!/^#[0-9a-fA-F]{6}$/.test(v.hex))return null;return{hex:v.hex.toLowerCase(),alpha:typeof v.alpha==="number"?Math.min(100,Math.max(0,v.alpha)):100,blur:v.blur===true}}function fg(h){var n=parseInt(h.slice(1),16);return .299*(n>>16&255)+.587*(n>>8&255)+.114*(n&255)>150?"${DARK_TEXT}":"${LIGHT_TEXT}"}function a8(h,a){if(a>=100)return h;var v=Math.round(a*2.55).toString(16);return h+(v.length<2?"0"+v:v)}function sh(h,t){var n=parseInt(h.slice(1),16);function m(x){var v=Math.round(t>=0?x+(255-x)*t:x*(1+t)).toString(16);return v.length<2?"0"+v:v}return"#"+m(n>>16&255)+m(n>>8&255)+m(n&255)}var p=norm(c.primary);if(p){var f=fg(p.hex),h=a8(p.hex,p.alpha);s.setProperty("--primary",h);s.setProperty("--ring",p.hex);s.setProperty("--sidebar-primary",h);s.setProperty("--sidebar-ring",p.hex);s.setProperty("--primary-foreground",f);s.setProperty("--sidebar-primary-foreground",f);if(p.blur)bl.push("primary")}var q=norm(c.secondary);if(q){s.setProperty("--secondary",a8(q.hex,q.alpha));s.setProperty("--secondary-foreground",fg(q.hex));if(q.blur)bl.push("secondary")}var k=norm(c.sticky);if(k){s.setProperty("--sticky",a8(k.hex,k.alpha));if(k.blur)bl.push("sticky")}var b=norm(c.background);if(b){var bf=fg(b.hex),dk=bf==="${LIGHT_TEXT}",cd=a8(sh(b.hex,dk?0.07:0.45),b.alpha);s.setProperty("--background",b.hex);s.setProperty("--foreground",bf);s.setProperty("--card",cd);s.setProperty("--popover",cd);s.setProperty("--card-foreground",bf);s.setProperty("--popover-foreground",bf);s.setProperty("--border",bf+(dk?"24":"59"));s.setProperty("--input",bf+(dk?"2e":"73"));s.setProperty("--muted",sh(b.hex,dk?0.1:-0.045));s.setProperty("--muted-foreground",bf+"a6");s.setProperty("--accent",sh(b.hex,dk?0.13:-0.07));s.setProperty("--accent-foreground",bf);s.setProperty("color-scheme",dk?"dark":"light");if(!q){s.setProperty("--secondary",sh(b.hex,dk?0.12:-0.06));s.setProperty("--secondary-foreground",bf)}if(b.blur)bl.push("background")}var sb=norm(c.sidebar);if(sb){var sf=fg(sb.hex),sd=sf==="${LIGHT_TEXT}";s.setProperty("--sidebar",a8(sb.hex,sb.alpha));s.setProperty("--sidebar-foreground",sf);s.setProperty("--sidebar-accent",sh(sb.hex,sd?0.09:-0.07));s.setProperty("--sidebar-accent-foreground",sf);s.setProperty("--sidebar-border",sf+(sd?"1f":"3d"));if(sb.blur)bl.push("sidebar")}var pj=norm(c.project);if(pj){s.setProperty("--project-card",a8(pj.hex,pj.alpha));s.setProperty("--project-card-foreground",fg(pj.hex));if(pj.blur)bl.push("project")}var w=norm(c.warning);if(w){s.setProperty("--warning",a8(w.hex,w.alpha));s.setProperty("--warning-foreground",fg(w.hex));if(w.blur)bl.push("warning")}if(bl.length)document.documentElement.setAttribute("data-blur",bl.join(" "))}catch(e){}})();`;
 
 /* ---------------------------------------------------------------- *
  * Color math shared with the color-wheel picker.
