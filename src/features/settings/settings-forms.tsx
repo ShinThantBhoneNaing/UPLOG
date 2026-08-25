@@ -3,9 +3,10 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { Camera, Loader2, Monitor, Moon, Sun } from "lucide-react";
+import { Camera, Loader2, LogOut, Monitor, Moon, Sun } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { logout } from "@/features/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -246,6 +247,23 @@ const THEMES = [
   { value: "dark", label: "Dark", icon: Moon },
   { value: "system", label: "System", icon: Monitor },
 ] as const;
+
+/** Sign out moved here since the top-bar avatar is no longer interactive. */
+export function SignOutForm() {
+  return (
+    <div className="flex max-w-md items-center justify-between gap-3 rounded-xl border bg-card p-5">
+      <div>
+        <p className="text-sm font-medium">Sign out of UPLOG</p>
+        <p className="text-xs text-muted-foreground">
+          You can sign back in anytime.
+        </p>
+      </div>
+      <Button variant="outline" onClick={() => void logout()}>
+        <LogOut aria-hidden /> Sign out
+      </Button>
+    </div>
+  );
+}
 
 export function AppearanceForm() {
   const { theme, setTheme } = useTheme();

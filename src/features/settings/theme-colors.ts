@@ -12,7 +12,8 @@ export type CustomColorKey =
   | "sticky"
   | "background"
   | "sidebar"
-  | "project";
+  | "project"
+  | "warning";
 
 export type ColorSetting = {
   hex: string; // #rrggbb
@@ -34,6 +35,7 @@ const ALL_KEYS: CustomColorKey[] = [
   "background",
   "sidebar",
   "project",
+  "warning",
 ];
 
 /** Near-black or near-white, whichever reads on the given background. */
@@ -93,6 +95,7 @@ const VAR_NAMES: Record<CustomColorKey, string[]> = {
     "--sidebar-border",
   ],
   project: ["--project-card", "--project-card-foreground"],
+  warning: ["--warning", "--warning-foreground"],
 };
 
 /** CSS variables driven by each customizable color. */
@@ -150,6 +153,12 @@ function varsFor(key: CustomColorKey, c: ColorSetting): Array<[string, string]> 
       return [
         ["--project-card", withAlpha(c.hex, c.alpha)],
         ["--project-card-foreground", readableForeground(c.hex)],
+      ];
+    case "warning":
+      // The "to do" status color: sticky paperclips, dots, badges.
+      return [
+        ["--warning", withAlpha(c.hex, c.alpha)],
+        ["--warning-foreground", readableForeground(c.hex)],
       ];
   }
 }
@@ -222,7 +231,7 @@ export function saveCustomColors(colors: CustomColors) {
  */
 export const THEME_COLORS_SCRIPT = `(function(){try{var c=JSON.parse(localStorage.getItem(${JSON.stringify(
   COLORS_STORAGE_KEY
-)})||"{}");var s=document.documentElement.style,bl=[];function norm(v){if(typeof v==="string")v={hex:v};if(!v||typeof v!=="object"||typeof v.hex!=="string"||!/^#[0-9a-fA-F]{6}$/.test(v.hex))return null;return{hex:v.hex.toLowerCase(),alpha:typeof v.alpha==="number"?Math.min(100,Math.max(0,v.alpha)):100,blur:v.blur===true}}function fg(h){var n=parseInt(h.slice(1),16);return .299*(n>>16&255)+.587*(n>>8&255)+.114*(n&255)>150?"${DARK_TEXT}":"${LIGHT_TEXT}"}function a8(h,a){if(a>=100)return h;var v=Math.round(a*2.55).toString(16);return h+(v.length<2?"0"+v:v)}function sh(h,t){var n=parseInt(h.slice(1),16);function m(x){var v=Math.round(t>=0?x+(255-x)*t:x*(1+t)).toString(16);return v.length<2?"0"+v:v}return"#"+m(n>>16&255)+m(n>>8&255)+m(n&255)}var p=norm(c.primary);if(p){var f=fg(p.hex),h=a8(p.hex,p.alpha);s.setProperty("--primary",h);s.setProperty("--ring",p.hex);s.setProperty("--sidebar-primary",h);s.setProperty("--sidebar-ring",p.hex);s.setProperty("--primary-foreground",f);s.setProperty("--sidebar-primary-foreground",f);if(p.blur)bl.push("primary")}var q=norm(c.secondary);if(q){s.setProperty("--secondary",a8(q.hex,q.alpha));s.setProperty("--secondary-foreground",fg(q.hex));if(q.blur)bl.push("secondary")}var k=norm(c.sticky);if(k){s.setProperty("--sticky",a8(k.hex,k.alpha));if(k.blur)bl.push("sticky")}var b=norm(c.background);if(b){var bf=fg(b.hex),dk=bf==="${LIGHT_TEXT}",cd=a8(sh(b.hex,dk?0.07:0.45),b.alpha);s.setProperty("--background",b.hex);s.setProperty("--foreground",bf);s.setProperty("--card",cd);s.setProperty("--popover",cd);s.setProperty("--card-foreground",bf);s.setProperty("--popover-foreground",bf);s.setProperty("--border",bf+(dk?"24":"59"));s.setProperty("--input",bf+(dk?"2e":"73"));if(b.blur)bl.push("background")}var sb=norm(c.sidebar);if(sb){var sf=fg(sb.hex),sd=sf==="${LIGHT_TEXT}";s.setProperty("--sidebar",a8(sb.hex,sb.alpha));s.setProperty("--sidebar-foreground",sf);s.setProperty("--sidebar-accent",sh(sb.hex,sd?0.09:-0.07));s.setProperty("--sidebar-accent-foreground",sf);s.setProperty("--sidebar-border",sf+(sd?"1f":"3d"));if(sb.blur)bl.push("sidebar")}var pj=norm(c.project);if(pj){s.setProperty("--project-card",a8(pj.hex,pj.alpha));s.setProperty("--project-card-foreground",fg(pj.hex));if(pj.blur)bl.push("project")}if(bl.length)document.documentElement.setAttribute("data-blur",bl.join(" "))}catch(e){}})();`;
+)})||"{}");var s=document.documentElement.style,bl=[];function norm(v){if(typeof v==="string")v={hex:v};if(!v||typeof v!=="object"||typeof v.hex!=="string"||!/^#[0-9a-fA-F]{6}$/.test(v.hex))return null;return{hex:v.hex.toLowerCase(),alpha:typeof v.alpha==="number"?Math.min(100,Math.max(0,v.alpha)):100,blur:v.blur===true}}function fg(h){var n=parseInt(h.slice(1),16);return .299*(n>>16&255)+.587*(n>>8&255)+.114*(n&255)>150?"${DARK_TEXT}":"${LIGHT_TEXT}"}function a8(h,a){if(a>=100)return h;var v=Math.round(a*2.55).toString(16);return h+(v.length<2?"0"+v:v)}function sh(h,t){var n=parseInt(h.slice(1),16);function m(x){var v=Math.round(t>=0?x+(255-x)*t:x*(1+t)).toString(16);return v.length<2?"0"+v:v}return"#"+m(n>>16&255)+m(n>>8&255)+m(n&255)}var p=norm(c.primary);if(p){var f=fg(p.hex),h=a8(p.hex,p.alpha);s.setProperty("--primary",h);s.setProperty("--ring",p.hex);s.setProperty("--sidebar-primary",h);s.setProperty("--sidebar-ring",p.hex);s.setProperty("--primary-foreground",f);s.setProperty("--sidebar-primary-foreground",f);if(p.blur)bl.push("primary")}var q=norm(c.secondary);if(q){s.setProperty("--secondary",a8(q.hex,q.alpha));s.setProperty("--secondary-foreground",fg(q.hex));if(q.blur)bl.push("secondary")}var k=norm(c.sticky);if(k){s.setProperty("--sticky",a8(k.hex,k.alpha));if(k.blur)bl.push("sticky")}var b=norm(c.background);if(b){var bf=fg(b.hex),dk=bf==="${LIGHT_TEXT}",cd=a8(sh(b.hex,dk?0.07:0.45),b.alpha);s.setProperty("--background",b.hex);s.setProperty("--foreground",bf);s.setProperty("--card",cd);s.setProperty("--popover",cd);s.setProperty("--card-foreground",bf);s.setProperty("--popover-foreground",bf);s.setProperty("--border",bf+(dk?"24":"59"));s.setProperty("--input",bf+(dk?"2e":"73"));if(b.blur)bl.push("background")}var sb=norm(c.sidebar);if(sb){var sf=fg(sb.hex),sd=sf==="${LIGHT_TEXT}";s.setProperty("--sidebar",a8(sb.hex,sb.alpha));s.setProperty("--sidebar-foreground",sf);s.setProperty("--sidebar-accent",sh(sb.hex,sd?0.09:-0.07));s.setProperty("--sidebar-accent-foreground",sf);s.setProperty("--sidebar-border",sf+(sd?"1f":"3d"));if(sb.blur)bl.push("sidebar")}var pj=norm(c.project);if(pj){s.setProperty("--project-card",a8(pj.hex,pj.alpha));s.setProperty("--project-card-foreground",fg(pj.hex));if(pj.blur)bl.push("project")}var w=norm(c.warning);if(w){s.setProperty("--warning",a8(w.hex,w.alpha));s.setProperty("--warning-foreground",fg(w.hex));if(w.blur)bl.push("warning")}if(bl.length)document.documentElement.setAttribute("data-blur",bl.join(" "))}catch(e){}})();`;
 
 /* ---------------------------------------------------------------- *
  * Color math shared with the color-wheel picker.

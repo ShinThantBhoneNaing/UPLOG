@@ -61,6 +61,12 @@ const TARGETS: Array<{
     description: "Stand-up projects view tiles",
     varName: "--project-card",
   },
+  {
+    key: "warning",
+    label: "To-do status",
+    description: "To-do paperclips, dots and badges",
+    varName: "--warning",
+  },
 ];
 
 const PRESETS = [
