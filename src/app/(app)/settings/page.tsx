@@ -4,6 +4,7 @@ import {
   AppearanceForm,
   PasswordForm,
   ProfileForm,
+  SignOutForm,
 } from "@/features/settings/settings-forms";
 import { ColorsForm } from "@/features/settings/colors-form";
 import { IconsForm } from "@/features/settings/icons-form";
@@ -44,6 +45,12 @@ export default async function SettingsPage() {
             Security
           </h2>
           <PasswordForm />
+        </section>
+        <section aria-label="Account">
+          <h2 className="mb-3 text-sm font-semibold text-muted-foreground">
+            Account
+          </h2>
+          <SignOutForm />
         </section>
       </div>
     </>

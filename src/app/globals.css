@@ -196,7 +196,8 @@
   html[data-blur~="primary"] [class*="bg-primary"],
   html[data-blur~="secondary"] [class*="bg-secondary"],
   html[data-blur~="sticky"] [class*="bg-sticky"],
-  html[data-blur~="project"] [class*="bg-project-card"] {
+  html[data-blur~="project"] [class*="bg-project-card"],
+  html[data-blur~="warning"] [class*="bg-warning"] {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
   }

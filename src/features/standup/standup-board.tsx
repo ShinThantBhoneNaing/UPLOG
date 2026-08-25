@@ -926,17 +926,17 @@ export function StandupBoard({
           <div className="overflow-x-auto rounded-xl border bg-card scrollbar-thin">
             <div className={cn("min-w-[880px]", meetingMode && "min-w-[1080px]")}>
               {/* header row */}
-              <div className="grid grid-cols-[180px_1fr_1fr_1fr_92px] border-b bg-muted/40 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <div className="sticky left-0 z-10 bg-muted/40 px-3 py-2.5 backdrop-blur">
+              <div className="grid grid-cols-[180px_1fr_1fr_1fr_92px] border-b bg-muted/40 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <div className="sticky left-0 z-10 bg-muted/40 px-3 py-1.5 backdrop-blur">
                   Employee
                 </div>
                 {COLUMNS.map((c) => (
-                  <div key={c.key} className="flex items-center gap-1.5 px-3 py-2.5">
+                  <div key={c.key} className="flex items-center gap-1.5 px-3 py-1.5">
                     <span className={cn("size-2 rounded-full", c.dot)} aria-hidden />
                     {c.label}
                   </div>
                 ))}
-                <div className="px-3 py-2.5 text-right">
+                <div className="px-3 py-1.5 text-right">
                   Time Taken
                 </div>
               </div>
